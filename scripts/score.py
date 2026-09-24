@@ -152,4 +152,19 @@ with open(f"{res}/summary{SUFFIX}.md", "w") as f:
         c2 = f"{agg(s, fast)}; {paired(s, fast)}" if fast and fast is not s else ""
         f.write(f"| {s['think']} | {s['set']} | {s['config']} | {s['n']} | {s['tps']} | {s['e2e_tps']} | {c1} | {c2} | "
                 f"{s['accept'] or ''} | {s['tau'] or ''} | {'' if s['score'] is None else s['score']} | {s['truncated']} | {'' if s['prompt_copy'] is None else s['prompt_copy']} |\n")
+    # MT-Bench per category: DFlash2 vs the fastest plain run, paired per prompt (median), plus acceptance
+    f.write("\n| think | MT-Bench category | n | DFlash2 vs PTQ1_0 plain (per-prompt median) | accept |\n|---|---|---|---|---|\n")
+    cats = {i: it["category"] for i, it in SETS.get("mtbench", {}).items()}
+    for th in ("off", "on"):
+        d, b = idx.get((th, "mtbench", "PQ2_0-dflash")), idx.get((th, "mtbench", "PTQ1_0-plain"))
+        if not d or not b:
+            continue
+        rows = {r["id"]: r for r in map(json.loads, open(f"{res}/PQ2_0-dflash/{th}/mtbench.jsonl"))}
+        for c in sorted(set(cats.values())):
+            ids = [i for i in d["per_id_tps"] if cats.get(i) == c and i in b["per_id_tps"]]
+            if not ids:
+                continue
+            r = sorted(d["per_id_tps"][i] / b["per_id_tps"][i] for i in ids)
+            dn = sum(rows[i]["draft_n"] or 0 for i in ids); da = sum(rows[i]["draft_accepted"] or 0 for i in ids)
+            f.write(f"| {th} | {c} | {len(ids)} | {r[len(r) // 2]:.2f}x | {da / dn:.2f} |\n" if dn else "")
 print(open(f"{res}/summary{SUFFIX}.md").read())

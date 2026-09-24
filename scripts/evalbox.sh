@@ -2,21 +2,24 @@
 # Box-side benchmark: one worker per GPU pulls (config, think) units from a queue, runs its own server container
 # on its own GPU, and runs every prompt set through scripts/evalrun.py. Resumable; mirrors results to S3.
 #   OUT=results/bench-2026-09-24 bash scripts/evalbox.sh
+# Extra pass on the same box: set UNITS / *_LIMITS / *_MAX / TAG, and AFTER_LOG=<main evalbox.log> so worker g
+# starts only once the main run's worker g reports "queue empty" (never two servers timing on one GPU).
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 2
 MODELS="${MODELS:-$HOME/models}"; IMAGE="${IMAGE:-bonsai2-run:dev}"; OUT="${OUT:-results/bench-$(date +%F)}"
 SETS="${SETS:-$HOME/sets}"; S3="${S3:-s3://skypilot-cairn-artifacts/bonsai2-run/$(basename "$OUT")}"
-OFF_LIMITS="humaneval:164 mbpp:100 gsm8k:100 mtbench:80"; ON_LIMITS="humaneval:40 mbpp:40 gsm8k:40 mtbench:40"
-mkdir -p "$OUT"; log() { echo "[$(date '+%F %T')] $*" | tee -a "$OUT/evalbox.log"; }
+OFF_LIMITS="${OFF_LIMITS:-humaneval:164 mbpp:100 gsm8k:100 mtbench:80}"; ON_LIMITS="${ON_LIMITS:-humaneval:40 mbpp:40 gsm8k:40 mtbench:40}"
+OFF_MAX="${OFF_MAX:-1024}"; ON_MAX="${ON_MAX:-4096}"; TAG="${TAG:-}"; AFTER_LOG="${AFTER_LOG:-}"
+UNITS="${UNITS:-PQ2_0 plain on;PTQ1_0 plain on;PQ2_0 dflash on;PQ2_0 plain off;PTQ1_0 plain off;PQ2_0 dflash off}"
+mkdir -p "$OUT"; log() { echo "[$(date '+%F %T')] $*" | tee -a "$OUT/evalbox$TAG.log"; }
 
 # Longest units first so the 4 GPUs finish together (think-on generates ~3x the tokens).
-QUEUE="$OUT/.queue"; [ -f "$QUEUE" ] || printf '%s\n' \
-  "PQ2_0 plain on" "PTQ1_0 plain on" "PQ2_0 dflash on" "PQ2_0 plain off" "PTQ1_0 plain off" "PQ2_0 dflash off" > "$QUEUE"
+QUEUE="$OUT/.queue$TAG"; [ -f "$QUEUE" ] || tr ';' '\n' <<< "$UNITS" > "$QUEUE"
 pop() { flock "$QUEUE.lock" bash -c "head -1 '$QUEUE'; sed -i 1d '$QUEUE'"; }
 
 unit() {  # gpu quant mode think
   local g=$1 q=$2 m=$3 th=$4 port=$((8090 + $1)) name="b2r$1" dir="$OUT/$2-$3/$4" limits mt flag=""
-  mkdir -p "$dir"; [ "$th" = on ] && { limits=$ON_LIMITS; flag="--think"; mt=4096; } || { limits=$OFF_LIMITS; mt=1024; }
+  mkdir -p "$dir"; [ "$th" = on ] && { limits=$ON_LIMITS; flag="--think"; mt=$ON_MAX; } || { limits=$OFF_LIMITS; mt=$OFF_MAX; }
   local d=(); [ "$m" = plain ] && d=(-e DRAFT=)
   docker rm -f "$name" >/dev/null 2>&1
   docker run -d --name "$name" --gpus "device=$g" --shm-size=16g -p "$port:8080" -v "$MODELS":/mnt/gcs:ro \
@@ -34,7 +37,11 @@ unit() {  # gpu quant mode think
   log "gpu$g $q-$m-$th: unit done"
 }
 
-worker() { local g=$1 u; while u=$(pop) && [ -n "$u" ]; do unit "$g" $u; done; log "gpu$g: queue empty"; }
+worker() {
+  local g=$1 u
+  [ -z "$AFTER_LOG" ] || until grep -q "gpu$g: queue empty" "$AFTER_LOG"; do sleep 30; done
+  while u=$(pop) && [ -n "$u" ]; do unit "$g" $u; done; log "gpu$g: queue empty"
+}
 
 ( while true; do sleep 300; aws s3 sync "$OUT" "$S3" --only-show-errors; done ) & SYNC=$!
 n=$(nvidia-smi -L | wc -l); log "start: $n GPUs, image $IMAGE"

@@ -10,7 +10,8 @@ import glob, json, os, re, subprocess, sys, tempfile
 
 sets_dir, res = sys.argv[1], sys.argv[2]
 SPEED_ONLY = "--speed-only" in sys.argv
-SETS = {n: {r["id"]: r for r in map(json.loads, open(f"{sets_dir}/{n}.jsonl"))} for n in ("humaneval", "mbpp", "gsm8k", "mtbench")}
+SETS = {n: {r["id"]: r for r in map(json.loads, open(f"{sets_dir}/{n}.jsonl"))}
+        for n in ("humaneval", "mbpp", "gsm8k", "mtbench", "math500") if os.path.exists(f"{sets_dir}/{n}.jsonl")}
 
 
 def code_of(text):
@@ -53,6 +54,35 @@ def gsm_ok(item, content):
     return bool(m) and num(m[-1]) is not None and num(m[-1]) == num(item["answer"])
 
 
+def boxed(text):  # contents of the last \boxed{...}, braces balanced
+    i = text.rfind("\\boxed{")
+    if i < 0:
+        return None
+    i += len("\\boxed{"); depth, j = 1, i
+    while j < len(text) and depth:
+        depth += {"{": 1, "}": -1}.get(text[j], 0); j += 1
+    return text[i:j - 1] if depth == 0 else None
+
+
+def norm(a):  # light MATH answer normalisation (Hendrycks-style), string compare after it
+    a = re.sub(r"\\text\{(.*?)\}", r"\1", a)
+    for x in ("\\left", "\\right", "\\!", "\\,", "\\;", "$", " ", "^\\circ", "^{\\circ}", "\\%", "%"):
+        a = a.replace(x, "")
+    a = a.replace("\\dfrac", "\\frac").replace("\\tfrac", "\\frac").rstrip(".")
+    a = re.sub(r"\\frac(\d)(\d)", r"\\frac{\1}{\2}", a)
+    return a[:-2] if a.endswith(".0") else a
+
+
+def math_ok(item, content):
+    b = boxed(content)
+    if b is None:
+        return False
+    if norm(b) == norm(item["answer"]):
+        return True
+    x, y = num(norm(b)), num(norm(item["answer"]))
+    return x is not None and x == y
+
+
 summary = []
 for path in sorted(glob.glob(f"{res}/*/*/*.jsonl")):
     config, think, set_name = path.split("/")[-3], path.split("/")[-2], os.path.basename(path)[:-6]
@@ -66,6 +96,8 @@ for path in sorted(glob.glob(f"{res}/*/*/*.jsonl")):
         correct = run_programs({r["id"]: program(set_name, items[r["id"]], r["content"]) for r in rows})
     elif set_name == "gsm8k":
         correct = {r["id"]: gsm_ok(items[r["id"]], r["content"]) for r in rows}
+    elif set_name == "math500":
+        correct = {r["id"]: math_ok(items[r["id"]], r["content"]) for r in rows}
     else:
         correct = {}
     tok = sum(r["completion_tokens"] for r in rows)

@@ -19,7 +19,7 @@ while true; do
   seen="$out"
   job=$("$SKY" queue "$CLUSTER" 2>/dev/null | awk '$1=="1"' | grep -oE "SUCCEEDED|FAILED[A-Z_]*|CANCELLED")
   [ -n "$job" ] && [ "$job" != "$lastjob" ] && echo "MAIN JOB $job (math/top-up passes run outside it)"; lastjob=$job
-  echo "$out" | grep -q -- "-topup.log:.*EVALBOX DONE" && { echo "ALL PASSES DONE"; exit 0; }
+  echo "$out" | grep -q -- "-extra.log:.*EVALBOX DONE" && { echo "ALL PASSES DONE"; exit 0; }
   now=$(date +%s)
   if [ $((now - last_hb)) -ge 900 ]; then
     echo "CHECK-IN $(( (now - start) / 60 ))m: $(echo "$out" | grep PROGRESS)"

@@ -36,7 +36,14 @@ topup_ids() {  # set -> file of ids truncated by any config (waits for all confi
 unit() {  # gpu quant mode think [set]
   local g=$1 q=$2 m=$3 th=$4 port=$((8090 + $1)) name="b2r$1" dir="$OUT/$2-$3/$4" limits mt flag=""
   mkdir -p "$dir"; [ "$th" = on ] && { limits=$ON_LIMITS; flag="--think"; mt=$ON_MAX; } || { limits=$OFF_LIMITS; mt=$OFF_MAX; }
-  local d=(); [ "$m" = plain ] && d=(-e DRAFT=)
+  local d=()   # mode -> container env; the dir name keeps the mode, so every mode is its own config in score.py
+  case "$m" in
+    plain)    d=(-e DRAFT=) ;;
+    dflash|dflashrep) d=() ;;
+    dflashn3) d=(-e DRAFT_N_MAX=3) ;;
+    zlab)     d=(-e DRAFT=Qwen3.8-27B-DFlash2-Q4_K_M.gguf) ;;
+    ngram)    d=(-e DRAFT= -e "EXTRA_ARGS=--spec-type ngram-mod") ;;
+  esac
   docker rm -f "$name" >/dev/null 2>&1
   docker run -d --name "$name" --gpus "device=$g" --shm-size=16g -p "$port:8080" -v "$MODELS":/mnt/gcs:ro \
     -e TARGET="Ternary-Bonsai-2-27B-$q.gguf" -e CTX="$SERVER_CTX" "${d[@]}" "$IMAGE" >/dev/null
@@ -51,10 +58,11 @@ unit() {  # gpu quant mode think [set]
       --limit "$TOPUP_N" --max-tokens "$TOPUP_MAX" --think 2>>"$dir/errors.log" || log "gpu$g $q-$m-$th: top-up $5 FAILED rc=$?"
     limits=""
   fi
-  for sl in $limits; do
-    log "gpu$g $q-$m-$th: ${sl%%:*} (n=${sl##*:})"
-    python3 scripts/evalrun.py "http://localhost:$port" "$SETS/${sl%%:*}.jsonl" "$dir/${sl%%:*}.jsonl" \
-      --limit "${sl##*:}" --max-tokens "$mt" $flag 2>>"$dir/errors.log" || log "gpu$g $q-$m-$th: ${sl%%:*} FAILED rc=$?"
+  for sl in $limits; do   # set:n[:max_tokens]
+    local sn n smt; IFS=: read -r sn n smt <<< "$sl"
+    log "gpu$g $q-$m-$th: $sn (n=$n, max ${smt:-$mt})"
+    python3 scripts/evalrun.py "http://localhost:$port" "$SETS/$sn.jsonl" "$dir/$sn.jsonl" \
+      --limit "$n" --max-tokens "${smt:-$mt}" $flag 2>>"$dir/errors.log" || log "gpu$g $q-$m-$th: $sn FAILED rc=$?"
   done
   docker logs "$name" > "$dir/server.log" 2>&1; docker rm -f "$name" >/dev/null
   log "gpu$g $q-$m-$th: unit done"

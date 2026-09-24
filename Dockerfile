@@ -4,8 +4,8 @@ ARG CUDA_VERSION=12.8.1
 ARG UBUNTU_VERSION=24.04
 
 FROM docker.io/nvidia/cuda:${CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION} AS build
-# PrismML-Eng/llama.cpp master at 2026-09-21; patches/ bring it to our llama.cpp-prism dflash2-port commit cbe495c59.
-ARG PRISM_SHA=9a9394a895b96003ca842a6041cb28ac49a108f7
+# PrismML-Eng/llama.cpp prism head 2026-09-24 (has the Hadamard borrow fix, PrismML #210); patches/ adds DFlash2 (ggml-org #27816).
+ARG PRISM_SHA=ee8ad0ef6b03b34b8709ea9440a4b3927e8a6524
 ARG CUDA_ARCHS="89;120"
 RUN apt-get update && apt-get install -y --no-install-recommends git cmake build-essential ca-certificates \
     && rm -rf /var/lib/apt/lists/*

@@ -1,0 +1,60 @@
+# bonsai2-run benchmark box, resume pass: 4x NVIDIA L4 (g6.12xlarge). Finishes the thinking-on top-up and the
+# thinking-off control runs from results/bench-2026-09-24 (synced up from the workdir; evalrun skips done ids).
+# Every pass runs INSIDE the run job, so SkyPilot's idle autodown cannot fire mid-benchmark (it did on 2026-09-24).
+# Original header: One image build, then scripts/evalbox.sh runs 6
+# (config, thinking) units over HumanEval / MBPP / GSM8K / MT-Bench, one worker per GPU. Results mirror to S3.
+# Runs under the cairn-skypilot key; cairn=true is the IAM destructive gate. Autodown after the run job ends.
+name: bonsai2-run-bench2
+
+resources:
+  cloud: aws
+  disk_size: 150
+  labels:
+    cairn: "true"
+    cairn-purpose: "bonsai2-run"
+  any_of:
+    - {region: us-east-2, instance_type: g6.12xlarge, use_spot: false}
+    - {region: us-west-2, instance_type: g6.12xlarge, use_spot: false}
+
+workdir: .
+
+setup: |
+  set -uo pipefail
+  sudo shutdown -h +300 'bonsai2-run bench2 hard deadline'   # backstop: stop the box 5 h after setup starts, whatever state
+  nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
+  docker info --format '{{.ServerVersion}} runtimes={{json .Runtimes}}' 2>&1 | head -1
+  if ! docker run --rm --gpus all nvidia/cuda:12.8.1-base-ubuntu24.04 nvidia-smi -L; then
+    echo ">>> installing nvidia-container-toolkit"
+    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    sudo apt-get update -qq && sudo apt-get install -y -qq nvidia-container-toolkit && sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
+    docker run --rm --gpus all nvidia/cuda:12.8.1-base-ubuntu24.04 nvidia-smi -L
+  fi
+  curl -LsSf https://astral.sh/uv/install.sh | sh > /dev/null 2>&1; export PATH="$HOME/.local/bin:$PATH"
+  uv tool install -q "huggingface_hub[cli]" >/dev/null 2>&1; uv tool install -q awscli >/dev/null 2>&1
+  uv venv -q ~/venv --python 3.12 && uv pip install -q --python ~/venv/bin/python datasets >/dev/null 2>&1
+  ~/venv/bin/python scripts/evalset.py ~/sets && docker pull -q python:3.12-slim >/dev/null
+  mkdir -p ~/models
+  ( hf download prism-ml/Ternary-Bonsai-2-27B-gguf Ternary-Bonsai-2-27B-PTQ1_0.gguf Ternary-Bonsai-2-27B-PQ2_0.gguf --local-dir ~/models >/dev/null 2>&1 \
+    && hf download naklitechie/Qwen3.8-27B-DFlash2-ternary-bonsai2 Qwen3.8-27B-DFlash2-r3-Q4_K_M.gguf --local-dir ~/models >/dev/null 2>&1 \
+    && hf download z-lab/Qwen3.8-27B-DFlash2-GGUF Qwen3.8-27B-DFlash2-Q4_K_M.gguf --local-dir ~/models >/dev/null 2>&1 \
+    && echo ">>> models ready: $(ls -la ~/models/*.gguf | awk '{print $5, $9}' | tr '\n' ' ')" ) &
+  DL=$!
+  t=$(date +%s); docker build -t bonsai2-run:dev . > ~/build.log 2>&1 && echo ">>> image built in $(( $(date +%s) - t ))s: $(docker image ls bonsai2-run:dev --format '{{.Size}}')" || { echo ">>> BUILD FAILED"; tail -40 ~/build.log; }
+  wait $DL
+  df -h / | tail -1
+
+run: |
+  set -uo pipefail
+  export PATH="$HOME/.local/bin:$PATH"; OUT=results/bench-2026-09-24; export OUT
+  # Top-up remainder (longest first), then per GPU the control runs once that GPU's top-up worker is done.
+  TAG=-topup2 TOPUP_MAX=16384 SERVER_CTX=20480 TOPUP_N=40 \
+    UNITS="PQ2_0 dflash on mbpp;PQ2_0 dflash on mtbench;PQ2_0 dflash on humaneval;PQ2_0 dflash on math500;PTQ1_0 plain on mtbench;PTQ1_0 plain on mbpp;PQ2_0 dflash on gsm8k" \
+    bash scripts/evalbox.sh & TP=$!
+  TAG=-extra2 AFTER_LOG=$OUT/evalbox-topup2.log UNITS="PQ2_0 ngram off;PQ2_0 zlab off;PQ2_0 dflashn3 off;PQ2_0 dflashrep off" \
+    OFF_LIMITS="humaneval:164 mbpp:100 gsm8k:100 mtbench:80 math500:100:2048" bash scripts/evalbox.sh & EP=$!
+  wait $TP $EP
+  ~/venv/bin/python scripts/score.py ~/sets $OUT > $OUT/score.out 2>&1
+  ~/venv/bin/python scripts/score.py ~/sets $OUT --extended > $OUT/score-extended.out 2>&1
+  tail -5 $OUT/score.out; aws s3 sync $OUT s3://skypilot-cairn-artifacts/bonsai2-run/$(basename $OUT) --only-show-errors
+  echo "BENCH2 DONE"

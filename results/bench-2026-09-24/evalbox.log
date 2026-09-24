@@ -1,0 +1,36 @@
+[2026-09-24 01:43:47] start: 4 GPUs, image bonsai2-run:dev
+[2026-09-24 01:43:54] gpu1 PTQ1_0-plain-on: humaneval (n=40)
+[2026-09-24 01:43:54] gpu0 PQ2_0-plain-on: humaneval (n=40)
+[2026-09-24 01:43:55] gpu3 PQ2_0-plain-off: humaneval (n=164)
+[2026-09-24 01:43:56] gpu2 PQ2_0-dflash-on: humaneval (n=40)
+[2026-09-24 02:04:23] gpu2 PQ2_0-dflash-on: mbpp (n=40)
+[2026-09-24 02:07:14] gpu3 PQ2_0-plain-off: mbpp (n=100)
+[2026-09-24 02:12:07] gpu1 PTQ1_0-plain-on: mbpp (n=40)
+[2026-09-24 02:15:01] gpu3 PQ2_0-plain-off: gsm8k (n=100)
+[2026-09-24 02:15:04] gpu0 PQ2_0-plain-on: mbpp (n=40)
+[2026-09-24 02:24:32] gpu2 PQ2_0-dflash-on: gsm8k (n=40)
+[2026-09-24 02:32:15] gpu2 PQ2_0-dflash-on: mtbench (n=40)
+[2026-09-24 02:34:21] gpu3 PQ2_0-plain-off: mtbench (n=80)
+[2026-09-24 02:39:48] gpu1 PTQ1_0-plain-on: gsm8k (n=40)
+[2026-09-24 02:43:22] gpu0 PQ2_0-plain-on: gsm8k (n=40)
+[2026-09-24 02:50:49] gpu1 PTQ1_0-plain-on: mtbench (n=40)
+[2026-09-24 02:52:19] gpu2 PQ2_0-dflash-on: unit done
+[2026-09-24 02:52:25] gpu2 PTQ1_0-plain-off: humaneval (n=164)
+[2026-09-24 02:53:34] gpu0 PQ2_0-plain-on: mtbench (n=40)
+[2026-09-24 02:59:30] gpu3 PQ2_0-plain-off: unit done
+[2026-09-24 02:59:38] gpu3 PQ2_0-dflash-off: humaneval (n=164)
+[2026-09-24 03:08:55] gpu3 PQ2_0-dflash-off: mbpp (n=100)
+[2026-09-24 03:12:46] gpu3 PQ2_0-dflash-off: gsm8k (n=100)
+[2026-09-24 03:14:23] gpu2 PTQ1_0-plain-off: mbpp (n=100)
+[2026-09-24 03:20:05] gpu1 PTQ1_0-plain-on: unit done
+[2026-09-24 03:20:05] gpu1: queue empty
+[2026-09-24 03:21:27] gpu3 PQ2_0-dflash-off: mtbench (n=80)
+[2026-09-24 03:21:52] gpu2 PTQ1_0-plain-off: gsm8k (n=100)
+[2026-09-24 03:25:10] gpu0 PQ2_0-plain-on: unit done
+[2026-09-24 03:25:10] gpu0: queue empty
+[2026-09-24 03:38:43] gpu3 PQ2_0-dflash-off: unit done
+[2026-09-24 03:38:43] gpu3: queue empty
+[2026-09-24 03:39:46] gpu2 PTQ1_0-plain-off: mtbench (n=80)
+[2026-09-24 04:03:33] gpu2 PTQ1_0-plain-off: unit done
+[2026-09-24 04:03:33] gpu2: queue empty
+[2026-09-24 04:03:34] EVALBOX DONE

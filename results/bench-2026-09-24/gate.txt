@@ -1,0 +1,3 @@
+email   251 tok  tg   31.19 tok/s  wall   8.48s accept 149/714
+code    512 tok  tg   65.62 tok/s  wall   8.26s accept 410/703
+story   512 tok  tg   28.86 tok/s  wall  18.11s accept 282/1594

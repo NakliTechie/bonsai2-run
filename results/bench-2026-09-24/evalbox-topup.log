@@ -1,0 +1,21 @@
+[2026-09-24 02:55:23] start: 4 GPUs, image bonsai2-run:dev
+[2026-09-24 04:04:30] gpu2 PQ2_0-plain-on: top-up math500 (8 ids, max 16384)
+[2026-09-24 04:30:04] gpu2 PQ2_0-plain-on: unit done
+[2026-09-24 04:30:11] gpu2 PQ2_0-plain-on: top-up humaneval (7 ids, max 16384)
+[2026-09-24 04:30:30] gpu3 PQ2_0-plain-on: top-up mbpp (8 ids, max 16384)
+[2026-09-24 05:02:01] gpu1 PQ2_0-plain-on: top-up mtbench (8 ids, max 16384)
+[2026-09-24 05:03:01] gpu0 PQ2_0-plain-on: top-up gsm8k (1 ids, max 16384)
+[2026-09-24 05:03:33] gpu0 PQ2_0-plain-on: unit done
+[2026-09-24 05:03:39] gpu0 PTQ1_0-plain-on: top-up math500 (8 ids, max 16384)
+[2026-09-24 05:16:33] gpu3 PQ2_0-plain-on: unit done
+[2026-09-24 05:16:39] gpu3 PTQ1_0-plain-on: top-up humaneval (7 ids, max 16384)
+[2026-09-24 05:18:07] gpu2 PQ2_0-plain-on: unit done
+[2026-09-24 05:18:13] gpu2 PTQ1_0-plain-on: top-up mbpp (8 ids, max 16384)
+[2026-09-24 05:28:45] gpu0 PTQ1_0-plain-on: unit done
+[2026-09-24 05:28:51] gpu0 PTQ1_0-plain-on: top-up mtbench (8 ids, max 16384)
+[2026-09-24 05:47:36] gpu1 PQ2_0-plain-on: unit done
+[2026-09-24 05:47:42] gpu1 PTQ1_0-plain-on: top-up gsm8k (1 ids, max 16384)
+[2026-09-24 05:50:24] gpu1 PTQ1_0-plain-on: unit done
+[2026-09-24 05:50:32] gpu1 PQ2_0-dflash-on: top-up math500 (8 ids, max 16384)
+[2026-09-24 05:57:11] gpu3 PTQ1_0-plain-on: unit done
+[2026-09-24 05:57:19] gpu3 PQ2_0-dflash-on: top-up humaneval (7 ids, max 16384)

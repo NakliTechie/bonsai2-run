@@ -19,6 +19,11 @@ while true; do
   seen="$out"
   job=$("$SKY" queue "$CLUSTER" 2>/dev/null | awk '$1=="1"' | grep -oE "SUCCEEDED|FAILED[A-Z_]*|CANCELLED")
   [ -n "$job" ] && { echo "JOB $job"; exit 0; }   # every pass runs inside the job (bench2 onward)
+  # Pending wrong teardown: autostop armed, no RUNNING job, GPUs busy (infra/aws README, gotcha 2026-09-24).
+  armed=$("$SKY" status "$CLUSTER" 2>/dev/null | awk -v c="$CLUSTER" '$1==c' | grep -oE "[0-9]+[hm]( \(down\))?" | head -1)
+  running=$("$SKY" queue "$CLUSTER" 2>/dev/null | grep -c RUNNING)
+  busy=$(ssh -o BatchMode=yes -o ConnectTimeout=15 "$CLUSTER" "nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits" 2>/dev/null | awk '$1 > 50' | wc -l)
+  [ -n "$armed" ] && [ "$running" -eq 0 ] && [ "$busy" -gt 0 ] && echo "WARN autostop armed ($armed) with no running job but $busy GPUs busy: sky autostop $CLUSTER --cancel, or move the work into a job"
   now=$(date +%s)
   if [ $((now - last_hb)) -ge 900 ]; then
     echo "CHECK-IN $(( (now - start) / 60 ))m: $(echo "$out" | grep PROGRESS)"

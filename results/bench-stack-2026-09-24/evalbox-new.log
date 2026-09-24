@@ -1,0 +1,34 @@
+[2026-09-24 16:41:10] start: 4 GPUs, image bonsai2-run:dev
+[2026-09-24 16:41:10] gpu1 PTQ1_0-plain-off: server died
+[2026-09-24 16:41:10] gpu3 PQ2_0-dflash-off: server died
+[2026-09-24 16:41:10] gpu0 PQ2_0-ngram-off: server died
+[2026-09-24 16:41:10] gpu2 PQ2_0-stack-off: server died
+[2026-09-24 16:41:11] gpu3: queue empty
+[2026-09-24 16:41:11] gpu0: queue empty
+[2026-09-24 16:41:11] gpu2: queue empty
+[2026-09-24 16:41:11] gpu1 PQ2_0-stackloose-off: server died
+[2026-09-24 16:41:11] gpu1: queue empty
+[2026-09-24 16:41:12] EVALBOX DONE
+[2026-09-24 16:47:39] start: 4 GPUs, image bonsai2-run:dev
+[2026-09-24 16:47:39] gpu1 PQ2_0-dflash-off: server died
+[2026-09-24 16:47:40] gpu1 PQ2_0-stackloose-off: server died
+[2026-09-24 16:47:40] gpu1: queue empty
+[2026-09-24 16:47:47] gpu2 PTQ1_0-plain-off: sb_sum (n=80, max 1024)
+[2026-09-24 16:47:47] gpu0 PQ2_0-ngram-off: sb_sum (n=80, max 1024)
+[2026-09-24 16:47:49] gpu3 PQ2_0-stack-off: sb_sum (n=80, max 1024)
+[2026-09-24 16:57:51] gpu3 PQ2_0-stack-off: sb_rag (n=80, max 1024)
+[2026-09-24 17:00:03] gpu2 PTQ1_0-plain-off: sb_rag (n=80, max 1024)
+[2026-09-24 17:00:41] gpu0 PQ2_0-ngram-off: sb_rag (n=80, max 1024)
+[2026-09-24 17:04:01] gpu3 PQ2_0-stack-off: codeedit (n=80, max 1024)
+[2026-09-24 17:08:02] gpu2 PTQ1_0-plain-off: codeedit (n=80, max 1024)
+[2026-09-24 17:08:34] gpu3 PQ2_0-stack-off: mtbench_t2 (n=80, max 1024)
+[2026-09-24 17:09:23] gpu0 PQ2_0-ngram-off: codeedit (n=80, max 1024)
+[2026-09-24 17:17:31] gpu0 PQ2_0-ngram-off: mtbench_t2 (n=80, max 1024)
+[2026-09-24 17:20:22] gpu2 PTQ1_0-plain-off: mtbench_t2 (n=80, max 1024)
+[2026-09-24 17:27:16] gpu3 PQ2_0-stack-off: unit done
+[2026-09-24 17:27:16] gpu3: queue empty
+[2026-09-24 17:44:12] gpu0 PQ2_0-ngram-off: unit done
+[2026-09-24 17:44:12] gpu0: queue empty
+[2026-09-24 17:46:39] gpu2 PTQ1_0-plain-off: unit done
+[2026-09-24 17:46:39] gpu2: queue empty
+[2026-09-24 17:46:40] EVALBOX DONE

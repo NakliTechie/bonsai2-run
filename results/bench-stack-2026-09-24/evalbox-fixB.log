@@ -1,0 +1,16 @@
+[2026-09-24 17:57:51] start: 4 GPUs, image bonsai2-run:dev
+[2026-09-24 17:58:00] gpu2 PQ2_0-stack-off: humaneval (n=164, max 1024)
+[2026-09-24 17:58:00] gpu3 PQ2_0-dflash-off: humaneval (n=164, max 1024)
+[2026-09-24 18:05:21] gpu2 PQ2_0-stack-off: mbpp (n=100, max 1024)
+[2026-09-24 18:07:11] gpu3 PQ2_0-dflash-off: mbpp (n=100, max 1024)
+[2026-09-24 18:09:20] gpu2 PQ2_0-stack-off: gsm8k (n=100, max 1024)
+[2026-09-24 18:11:01] gpu3 PQ2_0-dflash-off: gsm8k (n=100, max 1024)
+[2026-09-24 18:18:07] gpu2 PQ2_0-stack-off: mtbench (n=80, max 1024)
+[2026-09-24 18:19:37] gpu3 PQ2_0-dflash-off: mtbench (n=80, max 1024)
+[2026-09-24 18:35:06] gpu2 PQ2_0-stack-off: math500 (n=100, max 2048)
+[2026-09-24 18:36:40] gpu3 PQ2_0-dflash-off: math500 (n=100, max 2048)
+[2026-09-24 19:04:10] gpu2 PQ2_0-stack-off: unit done
+[2026-09-24 19:04:10] gpu2: queue empty
+[2026-09-24 19:05:29] gpu3 PQ2_0-dflash-off: unit done
+[2026-09-24 19:05:29] gpu3: queue empty
+[2026-09-24 19:05:30] EVALBOX DONE

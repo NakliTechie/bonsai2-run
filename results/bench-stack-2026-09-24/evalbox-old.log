@@ -1,0 +1,23 @@
+[2026-09-24 16:41:10] start: 4 GPUs, image bonsai2-run:dev
+[2026-09-24 16:41:40] gpu2: queue empty
+[2026-09-24 16:41:40] gpu3 PQ2_0-stackloose-off: server died
+[2026-09-24 16:41:40] gpu0 PQ2_0-dflash-off: server died
+[2026-09-24 16:41:40] gpu3: queue empty
+[2026-09-24 16:41:41] gpu1 PQ2_0-stack-off: server died
+[2026-09-24 16:41:41] gpu0: queue empty
+[2026-09-24 16:41:41] gpu1: queue empty
+[2026-09-24 16:41:41] EVALBOX DONE
+[2026-09-24 16:47:39] start: 4 GPUs, image bonsai2-run:dev
+[2026-09-24 16:47:39] gpu3: queue empty
+[2026-09-24 16:47:39] gpu0 PQ2_0-stack-off: server died
+[2026-09-24 16:47:39] gpu2 PQ2_0-dflash-off: server died
+[2026-09-24 16:47:39] gpu0: queue empty
+[2026-09-24 16:47:39] gpu2: queue empty
+[2026-09-24 16:47:49] gpu1 PQ2_0-stackloose-off: humaneval (n=164, max 1024)
+[2026-09-24 16:55:40] gpu1 PQ2_0-stackloose-off: mbpp (n=100, max 1024)
+[2026-09-24 16:59:46] gpu1 PQ2_0-stackloose-off: gsm8k (n=100, max 1024)
+[2026-09-24 17:08:54] gpu1 PQ2_0-stackloose-off: mtbench (n=80, max 1024)
+[2026-09-24 17:26:14] gpu1 PQ2_0-stackloose-off: math500 (n=100, max 2048)
+[2026-09-24 17:56:02] gpu1 PQ2_0-stackloose-off: unit done
+[2026-09-24 17:56:02] gpu1: queue empty
+[2026-09-24 17:56:03] EVALBOX DONE

@@ -1,0 +1,14 @@
+[2026-09-24 17:57:51] start: 4 GPUs, image bonsai2-run:dev
+[2026-09-24 17:58:00] gpu1 PQ2_0-stackloose-off: sb_sum (n=80, max 1024)
+[2026-09-24 17:58:00] gpu0 PQ2_0-dflash-off: sb_sum (n=80, max 1024)
+[2026-09-24 18:07:58] gpu0 PQ2_0-dflash-off: sb_rag (n=80, max 1024)
+[2026-09-24 18:08:27] gpu1 PQ2_0-stackloose-off: sb_rag (n=80, max 1024)
+[2026-09-24 18:14:06] gpu0 PQ2_0-dflash-off: codeedit (n=80, max 1024)
+[2026-09-24 18:14:53] gpu1 PQ2_0-stackloose-off: codeedit (n=80, max 1024)
+[2026-09-24 18:19:42] gpu0 PQ2_0-dflash-off: mtbench_t2 (n=80, max 1024)
+[2026-09-24 18:19:49] gpu1 PQ2_0-stackloose-off: mtbench_t2 (n=80, max 1024)
+[2026-09-24 18:38:26] gpu0 PQ2_0-dflash-off: unit done
+[2026-09-24 18:38:26] gpu0: queue empty
+[2026-09-24 18:39:04] gpu1 PQ2_0-stackloose-off: unit done
+[2026-09-24 18:39:04] gpu1: queue empty
+[2026-09-24 18:39:05] EVALBOX DONE

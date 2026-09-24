@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Watch the benchmark box: print new milestone lines as they appear, a heartbeat every 15 min, and every
 # terminal state (job FAILED/SUCCEEDED/CANCELLED, box gone). No `set -e`: one flaky ssh must not end the watch.
-CLUSTER="${1:-bonsai2-run-bench}"; SKY="${SKY:-$HOME/.cairn-sky-venv/bin/sky}"; RES="${RES:-bench-*}"   # results folder glob under results/
+CLUSTER="${1:-bonsai2-run-bench}"; SKY="${SKY:-$HOME/.cairn-sky-venv/bin/sky}"; RES="${RES:-bench-*}"; JOB="${JOB:-1}"   # results folder glob under results/; SkyPilot job id to follow
 seen=""; start=$(date +%s); last_hb=$start
 while true; do
   out=$(ssh -o BatchMode=yes -o ConnectTimeout=15 "$CLUSTER" '
@@ -17,7 +17,7 @@ while true; do
   new=$(comm -13 <(echo "$seen" | grep -v PROGRESS | sort -u) <(echo "$out" | grep -v PROGRESS | sort -u))
   [ -n "$new" ] && echo "$new"
   seen="$out"
-  job=$("$SKY" queue "$CLUSTER" 2>/dev/null | awk '$1=="1"' | grep -oE "SUCCEEDED|FAILED[A-Z_]*|CANCELLED")
+  job=$("$SKY" queue "$CLUSTER" 2>/dev/null | awk -v j="$JOB" '$1==j' | grep -oE "SUCCEEDED|FAILED[A-Z_]*|CANCELLED")
   [ -n "$job" ] && { echo "JOB $job"; exit 0; }   # every pass runs inside the job (bench2 onward)
   # Pending wrong teardown: autostop armed, no RUNNING job, GPUs busy (infra/aws README, gotcha 2026-09-24).
   armed=$("$SKY" status "$CLUSTER" 2>/dev/null | awk -v c="$CLUSTER" '$1==c' | grep -oE "[0-9]+[hm]( \(down\))?" | head -1)

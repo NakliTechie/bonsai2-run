@@ -1,0 +1,43 @@
+# Verify the published build/run commands verbatim on a clean single-L4 box (the Reddit/X post's "Run it" block).
+# Everything runs inside the job (infra/aws README gotcha 2026-09-24). cairn=true is the IAM destructive gate.
+name: bonsai2-verify-build
+
+resources:
+  cloud: aws
+  disk_size: 80
+  labels:
+    cairn: "true"
+    cairn-purpose: "bonsai2-run"
+  any_of:
+    - {region: us-east-2, instance_type: g6.2xlarge, use_spot: false}
+    - {region: us-west-2, instance_type: g6.2xlarge, use_spot: false}
+    - {region: eu-south-2, instance_type: g6.2xlarge, use_spot: false}
+
+setup: |
+  sudo shutdown -h +60 'verify-build hard deadline'
+  curl -LsSf https://astral.sh/uv/install.sh | sh > /dev/null 2>&1; ~/.local/bin/uv tool install -q "huggingface_hub[cli]" >/dev/null 2>&1
+  mkdir -p ~/m && cd ~/m && ~/.local/bin/hf download prism-ml/Ternary-Bonsai-2-27B-gguf Ternary-Bonsai-2-27B-PQ2_0.gguf --local-dir . >/dev/null 2>&1 \
+    && ~/.local/bin/hf download naklitechie/Qwen3.8-27B-DFlash2-ternary-bonsai2 Qwen3.8-27B-DFlash2-r3-Q4_K_M.gguf --local-dir . >/dev/null 2>&1 && ls -la ~/m/*.gguf
+  echo "cmake: $(cmake --version | head -1)  nvcc on PATH: $(command -v nvcc || echo NO)  cuda dir: $(ls -d /usr/local/cuda* 2>/dev/null | tr '\n' ' ')"
+
+run: |
+  # prerequisites the post states (CUDA toolkit on PATH + CMake + a C++ toolchain); not part of the verified block
+  sudo apt-get update -qq && sudo apt-get install -y -qq cmake build-essential git > /dev/null; export PATH=/usr/local/cuda/bin:$PATH
+  echo "VERIFY prereqs: $(cmake --version | head -1), $(nvcc --version | tail -1)"
+  set -x
+  cd ~ && rm -rf llama.cpp
+  # ---- the post's commands, verbatim ----
+  git clone -b dflash2-on-prism https://github.com/NakliTechie/llama.cpp && cd llama.cpp
+  t=$(date +%s)
+  cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=89 > ~/cmake.log 2>&1 && cmake --build build --target llama-server -j $(nproc) > ~/build.log 2>&1
+  rc=$?; echo "VERIFY build rc=$rc in $(( $(date +%s) - t ))s"; [ $rc = 0 ] || { tail -30 ~/cmake.log; tail -40 ~/build.log; exit 1; }
+  cd ~/m
+  ~/llama.cpp/build/bin/llama-server -m Ternary-Bonsai-2-27B-PQ2_0.gguf -ngl 999 -fa on --jinja \
+    -md Qwen3.8-27B-DFlash2-r3-Q4_K_M.gguf --spec-type draft-dflash --spec-draft-n-max 7 -ngld 999 > ~/server.log 2>&1 &
+  set +x
+  for i in $(seq 1 300); do curl -sf localhost:8080/health >/dev/null && break; kill -0 $! 2>/dev/null || { echo "VERIFY server died"; tail -40 ~/server.log; exit 1; }; sleep 1; done
+  echo "VERIFY ready after ${i}s; ctx: $(grep -oE 'n_ctx(_slot)? *= *[0-9]+' ~/server.log | tail -1)"
+  curl -s localhost:8080/v1/chat/completions -H 'Content-Type: application/json' -d '{"messages":[{"role":"user","content":"Write a Python function that returns the n-th Fibonacci number iteratively, with a docstring and three asserts."}],"temperature":0,"max_tokens":256,"chat_template_kwargs":{"enable_thinking":false}}' \
+    | python3 -c "import json,sys; r=json.load(sys.stdin); t=r['timings']; print('VERIFY tok/s', round(t['predicted_per_second'],1), 'draft accepted', t.get('draft_n_accepted'), '/', t.get('draft_n')); print(r['choices'][0]['message']['content'][:300])"
+  nvidia-smi --query-gpu=memory.used --format=csv,noheader | sed 's/^/VERIFY vram /'
+  grep -E "dflash|error|failed" ~/server.log | head -5

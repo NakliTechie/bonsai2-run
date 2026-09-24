@@ -7,7 +7,7 @@ Speed is aggregate (total tokens / total time). Speedups are also given per prom
 against the same-quant plain run and against the fastest plain run (PTQ1_0 plain).
 RESULTS_DIR/<config>/<think>/<set>.jsonl, config = <quant>-<plain|dflash>, think = off|on.
 """
-import glob, json, os, re, subprocess, sys, tempfile
+import difflib, glob, json, os, re, subprocess, sys, tempfile
 
 sets_dir, res = sys.argv[1], sys.argv[2]
 SPEED_ONLY = "--speed-only" in sys.argv
@@ -86,6 +86,12 @@ def math_ok(item, content):
     return x is not None and x == y
 
 
+def copied(item, content):  # share of the answer's chars that are verbatim runs (>= 20 chars) of the HumanEval prompt
+    a, b = content, item["code_prompt"]
+    m = difflib.SequenceMatcher(None, a, b, autojunk=False).get_matching_blocks()
+    return sum(x.size for x in m if x.size >= 20) / max(1, len(a))
+
+
 summary = []
 for path in sorted(p for p in glob.glob(f"{res}/*/*/*.jsonl") if not p.endswith(".topup.jsonl")):
     config, think, set_name = path.split("/")[-3], path.split("/")[-2], os.path.basename(path)[:-6]
@@ -110,12 +116,13 @@ for path in sorted(p for p in glob.glob(f"{res}/*/*/*.jsonl") if not p.endswith(
     ms = sum(r["predicted_ms"] or 0 for r in rows)
     dn = sum(r["draft_n"] or 0 for r in rows); da = sum(r["draft_accepted"] or 0 for r in rows)
     wall = sum(r["wall_s"] for r in rows)
+    copy = round(sum(copied(items[r["id"]], r["content"]) for r in rows) / len(rows), 3) if set_name == "humaneval" else None
     summary.append({"config": config, "think": think, "set": set_name, "n": len(rows), "tokens": tok,
                     "tps": round(tok / (ms / 1000), 2) if ms else None, "e2e_tps": round(tok / wall, 2),
                     "per_id_tps": {r["id"]: r["completion_tokens"] / (r["predicted_ms"] / 1000) for r in rows if r["predicted_ms"]},
                     "accept": round(da / dn, 3) if dn else None,
                     "tau": round(tok / (tok - da), 2) if dn and tok > da else None,   # tokens per target forward pass
-                    "truncated": sum(r["finish"] == "length" for r in rows),
+                    "truncated": sum(r["finish"] == "length" for r in rows), "prompt_copy": copy,
                     "score": round(sum(correct.values()) / len(correct), 3) if correct else None,
                     "correct_ids": sorted(k for k, v in correct.items() if v)})
 
@@ -136,13 +143,13 @@ def agg(s, b):
 json.dump([{k: v for k, v in s.items() if k != "per_id_tps"} for s in summary], open(f"{res}/summary{SUFFIX}.json", "w"), indent=1)
 idx = {(s["think"], s["set"], s["config"]): s for s in summary}
 with open(f"{res}/summary{SUFFIX}.md", "w") as f:
-    f.write("| think | set | config | n | decode tok/s | e2e tok/s | vs same-quant plain (agg; per-prompt median [IQR]) | vs PTQ1_0 plain (agg; per-prompt) | accept | tau | score | trunc |\n")
-    f.write("|---|---|---|---|---|---|---|---|---|---|---|---|\n")
+    f.write("| think | set | config | n | decode tok/s | e2e tok/s | vs same-quant plain (agg; per-prompt median [IQR]) | vs PTQ1_0 plain (agg; per-prompt) | accept | tau | score | trunc | copied from prompt |\n")
+    f.write("|---|---|---|---|---|---|---|---|---|---|---|---|---|\n")
     for s in sorted(summary, key=lambda s: (s["think"], s["set"], s["config"])):
         same = idx.get((s["think"], s["set"], s["config"].split("-")[0] + "-plain"))
         fast = idx.get((s["think"], s["set"], "PTQ1_0-plain"))
         c1 = f"{agg(s, same)}; {paired(s, same)}" if same and same is not s else ""
         c2 = f"{agg(s, fast)}; {paired(s, fast)}" if fast and fast is not s else ""
         f.write(f"| {s['think']} | {s['set']} | {s['config']} | {s['n']} | {s['tps']} | {s['e2e_tps']} | {c1} | {c2} | "
-                f"{s['accept'] or ''} | {s['tau'] or ''} | {'' if s['score'] is None else s['score']} | {s['truncated']} |\n")
+                f"{s['accept'] or ''} | {s['tau'] or ''} | {'' if s['score'] is None else s['score']} | {s['truncated']} | {'' if s['prompt_copy'] is None else s['prompt_copy']} |\n")
 print(open(f"{res}/summary{SUFFIX}.md").read())

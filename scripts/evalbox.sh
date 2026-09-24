@@ -41,12 +41,12 @@ unit() {  # gpu quant mode think [set]
   local d=()   # mode -> container env; the dir name keeps the mode, so every mode is its own config in score.py
   case "$m" in
     plain)    d=(-e DRAFT=) ;;
-    dflash|dflashrep) d=() ;;
-    dflashn3) d=(-e DRAFT_N_MAX=3) ;;
-    zlab)     d=(-e DRAFT=Qwen3.8-27B-DFlash2-Q4_K_M.gguf) ;;
+    dflash|dflashrep) d=(-e NGRAM=0) ;;
+    dflashn3) d=(-e NGRAM=0 -e DRAFT_N_MAX=3) ;;
+    zlab)     d=(-e NGRAM=0 -e DRAFT=Qwen3.8-27B-DFlash2-Q4_K_M.gguf) ;;
     ngram)    d=(-e DRAFT= -e "EXTRA_ARGS=--spec-type ngram-mod") ;;
-    stack)    d=(-e "EXTRA_ARGS=--spec-type ngram-mod") ;;   # ngram-mod first (llama.cpp priority), DFlash2 as fallback
-    stackloose) d=(-e "EXTRA_ARGS=--spec-type ngram-mod --spec-ngram-mod-n-match 12 --spec-ngram-mod-n-min 8 --spec-ngram-mod-n-max 32") ;;
+    stack)    d=(-e NGRAM=1) ;;   # ngram-mod first (llama.cpp priority), DFlash2 as fallback
+    stackloose) d=(-e NGRAM=0 -e "EXTRA_ARGS=--spec-type ngram-mod --spec-ngram-mod-n-match 12 --spec-ngram-mod-n-min 8 --spec-ngram-mod-n-max 32") ;;
   esac
   docker rm -f "$name" >/dev/null 2>&1
   docker run -d --name "$name" --gpus "device=$g" --shm-size=16g -p "$port:8080" -v "$MODELS":/mnt/gcs:ro \

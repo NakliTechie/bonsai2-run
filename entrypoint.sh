@@ -12,6 +12,7 @@ COPY_STREAMS="${COPY_STREAMS:-8}"                      # parallel range reads pe
 CTX="${CTX:-16384}"
 PARALLEL="${PARALLEL:-1}"
 DRAFT_N_MAX="${DRAFT_N_MAX:-7}"
+NGRAM="${NGRAM:-1}"                                    # 1 = try ngram-mod before DFlash2 (results/bench-stack-2026-09-24)
 PORT="${PORT:-8080}"
 
 us() { echo "${EPOCHREALTIME/./}"; }
@@ -51,6 +52,7 @@ args=(-m "$WDIR/$TARGET" -ngl 999 -fa on -c "$CTX" -np "$PARALLEL" --host 0.0.0.
       --no-warmup --metrics --jinja)
 if [ -n "$DRAFT" ]; then
   args+=(-md "$WDIR/$DRAFT" --spec-type draft-dflash --spec-draft-n-max "$DRAFT_N_MAX" -ngld 999)
+  [ "$NGRAM" = 1 ] && args+=(--spec-type ngram-mod)   # llama.cpp tries ngram-mod first, DFlash2 as fallback
 fi
 # shellcheck disable=SC2206
 args+=(${EXTRA_ARGS:-})

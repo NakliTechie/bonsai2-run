@@ -2,6 +2,7 @@
 """Greedy bench + parity check against a running bonsai2-run endpoint. Stdlib only.
 
   bench.py run URL OUT.jsonl [--max-tokens N] [--token T]   # 3 fixed prompts, temperature 0, thinking off
+  bench.py run ... --n-max 3 --p-min 0.5                  # per-request DFlash2 draft length / confidence floor
   bench.py diff A.jsonl B.jsonl                              # byte-compare outputs of two runs (plain vs DFlash2)
 """
 import argparse, json, sys, time, urllib.request
@@ -27,6 +28,10 @@ def run(a):
         for name, prompt in PROMPTS.items():
             body = {"messages": [{"role": "user", "content": prompt}], "temperature": 0, "max_tokens": a.max_tokens,
                     "chat_template_kwargs": {"enable_thinking": False}}
+            if a.n_max is not None:
+                body["speculative.n_max"] = a.n_max
+            if a.p_min is not None:
+                body["speculative.p_min"] = a.p_min
             t = time.time()
             r = post(url, body, a.token)
             wall = time.time() - t
@@ -61,6 +66,7 @@ if __name__ == "__main__":
     sp = p.add_subparsers(dest="cmd", required=True)
     r = sp.add_parser("run"); r.add_argument("url"); r.add_argument("out")
     r.add_argument("--max-tokens", type=int, default=512); r.add_argument("--token", default="")
+    r.add_argument("--n-max", type=int); r.add_argument("--p-min", type=float)
     d = sp.add_parser("diff"); d.add_argument("a"); d.add_argument("b")
     a = p.parse_args()
     run(a) if a.cmd == "run" else diff(a)

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # bonsai2-run: scale-to-zero Cloud Run GPU deploy of Ternary-Bonsai-2-27B + DFlash2 drafter.
-#   ./deploy.sh status | stage | deploy | bench | down
+#   ./deploy.sh status | stage | deploy | bench | sweep | down
 # Every verb ends with one `verdict=<CODE> next=<command>` line and the matching exit code (SPEC.md §0).
 set -uo pipefail
 cd "$(dirname "$0")" || exit 2
@@ -99,6 +99,19 @@ cmd_bench() {
   verdict OK "cat $out/bench.jsonl" 0
 }
 
+cmd_sweep() {  # DFlash2 draft length x confidence floor on one warm instance; per-request, no redeploy
+  preflight
+  local url out tok n p; url="$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.url)' 2>/dev/null)"
+  [ -n "$url" ] || verdict NOT_DEPLOYED "./deploy.sh deploy" 16
+  out="results/sweep-$GPU_TYPE-$(date +%F-%H%M)"; mkdir -p "$out"; tok="$(gcloud auth print-identity-token)"
+  for n in ${SWEEP_N_MAX:-1 2 3 5 7}; do for p in ${SWEEP_P_MIN:-0.0 0.5}; do
+    step "n_max=$n p_min=$p"
+    python3 scripts/bench.py run "$url" "$out/n$n-p$p.jsonl" --token "$tok" --n-max "$n" --p-min "$p" \
+      || verdict UNHEALTHY "gcloud run services logs read $SERVICE --region $REGION --limit 50" 15
+  done; done
+  verdict OK "ls $out" 0
+}
+
 cmd_down() {
   preflight
   gcloud run services delete "$SERVICE" --region "$REGION" --quiet >/dev/null 2>&1 || verdict NOT_DEPLOYED "nothing to delete" 16
@@ -106,6 +119,6 @@ cmd_down() {
 }
 
 case "${1:-status}" in
-  status|stage|deploy|bench|down) "cmd_$1" ;;
-  *) echo "usage: ./deploy.sh status|stage|deploy|bench|down"; exit 2 ;;
+  status|stage|deploy|bench|sweep|down) "cmd_$1" ;;
+  *) echo "usage: ./deploy.sh status|stage|deploy|bench|sweep|down"; exit 2 ;;
 esac

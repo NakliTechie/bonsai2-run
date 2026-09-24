@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Score and aggregate a benchmark results dir. Generated code runs inside `docker run --network none`.
 
-  score.py SETS_DIR RESULTS_DIR [--speed-only]   # writes RESULTS_DIR/summary.md and summary.json
+  score.py SETS_DIR RESULTS_DIR [--speed-only] [--extended]   # writes RESULTS_DIR/summary[-extended].{md,json}
+--extended: rows from <set>.topup.jsonl (truncated thinking runs re-run with a higher token limit) replace the capped rows.
 Speed is aggregate (total tokens / total time). Speedups are also given per prompt, paired by id, as median [p25-p75],
 against the same-quant plain run and against the fastest plain run (PTQ1_0 plain).
 RESULTS_DIR/<config>/<think>/<set>.jsonl, config = <quant>-<plain|dflash>, think = off|on.
@@ -10,6 +11,8 @@ import glob, json, os, re, subprocess, sys, tempfile
 
 sets_dir, res = sys.argv[1], sys.argv[2]
 SPEED_ONLY = "--speed-only" in sys.argv
+EXT = "--extended" in sys.argv
+SUFFIX = "-extended" if EXT else ""
 SETS = {n: {r["id"]: r for r in map(json.loads, open(f"{sets_dir}/{n}.jsonl"))}
         for n in ("humaneval", "mbpp", "gsm8k", "mtbench", "math500") if os.path.exists(f"{sets_dir}/{n}.jsonl")}
 
@@ -84,9 +87,12 @@ def math_ok(item, content):
 
 
 summary = []
-for path in sorted(glob.glob(f"{res}/*/*/*.jsonl")):
+for path in sorted(p for p in glob.glob(f"{res}/*/*/*.jsonl") if not p.endswith(".topup.jsonl")):
     config, think, set_name = path.split("/")[-3], path.split("/")[-2], os.path.basename(path)[:-6]
     rows = [json.loads(l) for l in open(path)]
+    if EXT and os.path.exists(path[:-6] + ".topup.jsonl"):
+        top = {r["id"]: r for r in map(json.loads, open(path[:-6] + ".topup.jsonl"))}
+        rows = [top.get(r["id"], r) for r in rows]
     if not rows:
         continue
     items = SETS[set_name]
@@ -127,9 +133,9 @@ def agg(s, b):
     return f"{s['tps'] / b['tps']:.2f}x" if b and s is not b and s["tps"] and b["tps"] else ""
 
 
-json.dump([{k: v for k, v in s.items() if k != "per_id_tps"} for s in summary], open(f"{res}/summary.json", "w"), indent=1)
+json.dump([{k: v for k, v in s.items() if k != "per_id_tps"} for s in summary], open(f"{res}/summary{SUFFIX}.json", "w"), indent=1)
 idx = {(s["think"], s["set"], s["config"]): s for s in summary}
-with open(f"{res}/summary.md", "w") as f:
+with open(f"{res}/summary{SUFFIX}.md", "w") as f:
     f.write("| think | set | config | n | decode tok/s | e2e tok/s | vs same-quant plain (agg; per-prompt median [IQR]) | vs PTQ1_0 plain (agg; per-prompt) | accept | tau | score | trunc |\n")
     f.write("|---|---|---|---|---|---|---|---|---|---|---|---|\n")
     for s in sorted(summary, key=lambda s: (s["think"], s["set"], s["config"])):
@@ -139,4 +145,4 @@ with open(f"{res}/summary.md", "w") as f:
         c2 = f"{agg(s, fast)}; {paired(s, fast)}" if fast and fast is not s else ""
         f.write(f"| {s['think']} | {s['set']} | {s['config']} | {s['n']} | {s['tps']} | {s['e2e_tps']} | {c1} | {c2} | "
                 f"{s['accept'] or ''} | {s['tau'] or ''} | {'' if s['score'] is None else s['score']} | {s['truncated']} |\n")
-print(open(f"{res}/summary.md").read())
+print(open(f"{res}/summary{SUFFIX}.md").read())

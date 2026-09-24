@@ -7,7 +7,7 @@ while true; do
   out=$(ssh -o BatchMode=yes -o ConnectTimeout=15 "$CLUSTER" '
     cat ~/sky_logs/*/setup*.log ~/sky_logs/*/*/setup*.log 2>/dev/null | grep -E ">>>|humaneval |mbpp |gsm8k |mtbench |L4,"
     cat ~/sky_logs/sky-*/run.log ~/sky_logs/*/*/run.log 2>/dev/null | grep -E "GATE|tok/s|Traceback"
-    cat ~/sky_workdir/results/bench-*/evalbox.log 2>/dev/null | grep -E "unit done|FAILED|died|queue empty|EVALBOX DONE|start:"
+    grep -HE "unit done|top-up|FAILED|died|EVALBOX DONE" ~/sky_workdir/results/bench-*/evalbox*.log 2>/dev/null | sed "s|.*/evalbox||"
     echo "PROGRESS $(cat ~/sky_workdir/results/bench-*/*/*/*.jsonl 2>/dev/null | wc -l) rows"' 2>&1)
   rc=$?
   if [ $rc -ne 0 ]; then
@@ -18,7 +18,8 @@ while true; do
   [ -n "$new" ] && echo "$new"
   seen="$out"
   job=$("$SKY" queue "$CLUSTER" 2>/dev/null | awk '$1=="1"' | grep -oE "SUCCEEDED|FAILED[A-Z_]*|CANCELLED")
-  [ -n "$job" ] && { echo "JOB $job"; exit 0; }
+  [ -n "$job" ] && [ "$job" != "$lastjob" ] && echo "MAIN JOB $job (math/top-up passes run outside it)"; lastjob=$job
+  echo "$out" | grep -q -- "-topup.log:.*EVALBOX DONE" && { echo "ALL PASSES DONE"; exit 0; }
   now=$(date +%s)
   if [ $((now - last_hb)) -ge 900 ]; then
     echo "CHECK-IN $(( (now - start) / 60 ))m: $(echo "$out" | grep PROGRESS)"

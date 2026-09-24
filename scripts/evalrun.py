@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """Run one prompt set against a running endpoint, greedy, one request at a time. Resumable: ids already in OUT are skipped.
 
-  evalrun.py URL SET.jsonl OUT.jsonl --limit N --max-tokens M [--think]
+  evalrun.py URL SET.jsonl OUT.jsonl --limit N --max-tokens M [--think] [--ids FILE]   # --ids: only these ids
 """
 import argparse, json, os, time, urllib.request
 
 a = argparse.ArgumentParser()
 a.add_argument("url"); a.add_argument("set"); a.add_argument("out")
 a.add_argument("--limit", type=int, default=0); a.add_argument("--max-tokens", type=int, default=1024)
-a.add_argument("--think", action="store_true")
+a.add_argument("--think", action="store_true"); a.add_argument("--ids")
 a = a.parse_args()
 
 rows = [json.loads(l) for l in open(a.set)]
 rows = rows[: a.limit] if a.limit else rows
+if a.ids:
+    keep = set(open(a.ids).read().split())
+    rows = [r for r in rows if r["id"] in keep]
 done = {json.loads(l)["id"] for l in open(a.out)} if os.path.exists(a.out) else set()
 url = a.url.rstrip("/") + "/v1/chat/completions"
 with open(a.out, "a") as f:

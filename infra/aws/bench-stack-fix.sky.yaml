@@ -47,13 +47,18 @@ setup: |
   df -h / | tail -1
 
 run: |
-  # Re-runs the two pass-A units lost on 2026-09-24 16:47 (pass B's AFTER_LOG matched a stale "gpu1: queue empty"
+  # Re-runs the four units lost on 2026-09-24 16:47 (pass B's AFTER_LOG matched a stale "gpu1: queue empty"
   # from the aborted job 1, so both passes used container b2r1 / port 8091 at once). Fresh TAG, no AFTER_LOG.
   set -uo pipefail
   export PATH="$HOME/.local/bin:$PATH"; OUT=results/bench-stack-2026-09-24; export OUT
   docker image inspect bonsai2-run:dev >/dev/null 2>&1 || { echo "NO IMAGE"; exit 1; }
   rm -f $OUT/.queue-fix*
-  TAG=-fix UNITS="PQ2_0 dflash off;PQ2_0 stackloose off" OFF_LIMITS="sb_sum:80 sb_rag:80 codeedit:80 mtbench_t2:80" bash scripts/evalbox.sh
+  # pass B lost two units the same way (stack + dflash on the original sets); run them on the GPUs pass fixA leaves free
+  TAG=-fixA UNITS="PQ2_0 dflash off;PQ2_0 stackloose off" OFF_LIMITS="sb_sum:80 sb_rag:80 codeedit:80 mtbench_t2:80" bash scripts/evalbox.sh & A=$!
+  sleep 5
+  TAG=-fixB AFTER_LOG=$OUT/evalbox-fixA.log UNITS="PQ2_0 stack off;PQ2_0 dflash off" \
+    OFF_LIMITS="humaneval:164 mbpp:100 gsm8k:100 mtbench:80 math500:100:2048" bash scripts/evalbox.sh & B=$!
+  wait $A $B
   ~/venv/bin/python scripts/score.py ~/sets $OUT > $OUT/score.out 2>&1; tail -45 $OUT/score.out
   aws s3 sync $OUT s3://skypilot-cairn-artifacts/bonsai2-run/$(basename $OUT) --only-show-errors
   echo "BENCH-STACK-FIX DONE"

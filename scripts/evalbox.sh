@@ -4,6 +4,7 @@
 #   OUT=results/bench-2026-09-24 bash scripts/evalbox.sh
 # Extra pass on the same box: set UNITS / *_LIMITS / *_MAX / TAG, and AFTER_LOG=<main evalbox.log> so worker g
 # starts only once the main run's worker g reports "queue empty" (never two servers timing on one GPU).
+# Side-by-side passes: give each a disjoint GPUS="0 1" / GPUS="2 3" instead of AFTER_LOG.
 # Top-up pass: TOPUP_MAX=16384 SERVER_CTX=20480 and units "<quant> <mode> on <set>". Each unit waits until all
 # CONFIGS finished <set> (TOPUP_N rows), then re-runs the union of their truncated ids into <set>.topup.jsonl.
 set -uo pipefail
@@ -79,7 +80,8 @@ worker() {
 
 ( while true; do sleep 300; aws s3 sync "$OUT" "$S3" --only-show-errors; done ) & SYNC=$!
 n=$(nvidia-smi -L | wc -l); log "start: $n GPUs, image $IMAGE"
-pids=(); for ((g = 0; g < n; g++)); do worker "$g" & pids+=($!); done
+GPUS="${GPUS:-$(seq 0 $((n - 1)))}"   # GPU indices this pass may use; disjoint sets let passes run side by side
+pids=(); for g in $GPUS; do worker "$g" & pids+=($!); done
 wait "${pids[@]}"
 kill "$SYNC" 2>/dev/null; aws s3 sync "$OUT" "$S3" --only-show-errors
 log "EVALBOX DONE"

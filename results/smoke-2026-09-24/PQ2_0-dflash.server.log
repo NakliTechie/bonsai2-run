@@ -1,0 +1,56 @@
+[bonsai2-run +0.001s] staging Ternary-Bonsai-2-27B-PQ2_0.gguf Qwen3.8-27B-DFlash2-r3-Q4_K_M.gguf -> /dev/shm/models (8 streams/file)
+[bonsai2-run +3.271s] staged 7.8G
+[bonsai2-run +3.272s] exec llama-server -m /dev/shm/models/Ternary-Bonsai-2-27B-PQ2_0.gguf -ngl 999 -fa on -c 16384 -np 1 --host 0.0.0.0 --port 8080 --no-warmup --metrics --jinja -md /dev/shm/models/Qwen3.8-27B-DFlash2-r3-Q4_K_M.gguf --spec-type draft-dflash --spec-draft-n-max 7 -ngld 999
+0.00.100.462 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.100.797 W srv  llama_server: -----------------
+0.00.100.802 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.100.802 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.100.803 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.100.803 W srv  llama_server: -----------------
+0.00.102.079 I srv    load_model: loading model '/dev/shm/models/Ternary-Bonsai-2-27B-PQ2_0.gguf'
+0.01.020.898 E llama_init_from_model: failed to initialize the context: dflash requires ctx_other to be set (this warning is normal during memory fitting)
+0.01.061.256 W operator(): failed to measure the memory of the extra model, fitting without it: failed to create llama_context from model
+0.02.775.541 I cmn          init: llama threadpool init, n_threads = 8
+0.02.775.576 I common_speculative_init_result: loading draft model '/dev/shm/models/Qwen3.8-27B-DFlash2-r3-Q4_K_M.gguf'
+0.03.537.811 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 16384, kv_unified = 'false'
+0.03.537.829 I common_speculative_impl_draft_dflash: adding speculative implementation 'draft-dflash'
+0.03.537.831 I common_speculative_impl_draft_dflash: - n_max=7, n_min=0, p_min=0.00
+0.03.537.832 I common_speculative_impl_draft_dflash: - block_size=8, mask_token_id=248070, n_extract=5, sample_from_anchor=true, lineage=dflash
+0.03.590.160 I srv          init: chat template supports preserving reasoning, consider enabling it via --reasoning-preserve
+0.03.590.175 I srv  llama_server: model loaded
+0.03.590.177 I srv  llama_server: listening on http://0.0.0.0:8080
+0.03.590.178 W srv  llama_server: NOTICE: server default port will be changed to :9931 in a future release
+0.03.590.178 W srv  llama_server:         ref: https://github.com/ggml-org/llama.cpp/pull/26508
+0.03.916.392 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+0.03.916.457 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.07.769.125 I slot print_timing: id  0 | task 0 | n_gen =    102, tg =  29.74 t/s, tg_3s =  30.03 t/s
+0.10.795.569 I slot print_timing: id  0 | task 0 | n_gen =    190, tg =  29.43 t/s, tg_3s =  29.08 t/s
+0.12.938.525 I slot print_timing: id  0 | task 0 | prompt eval time =     456.08 ms /    40 tokens (   11.40 ms per token,    87.70 tokens per second)
+0.12.938.532 I slot print_timing: id  0 | task 0 |        eval time =    8565.95 ms /   251 tokens (   34.26 ms per token,    29.19 tokens per second)
+0.12.938.532 I slot print_timing: id  0 | task 0 |       total time =    9022.03 ms /   291 tokens
+0.12.938.533 I slot print_timing: id  0 | task 0 |    graphs reused =        100
+0.12.938.537 I slot print_timing: id  0 | task 0 | draft acceptance = 0.20868 (  149 accepted /   714 generated), mean len =  2.46
+0.12.938.574 I slot      release: id  0 | task 0 | stop processing: n_tokens = 291, truncated = 0
+0.12.941.260 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = 922143302
+0.13.104.435 I slot launch_slot_: id  0 | task 105 | processing task, is_child = 0
+0.16.456.013 I slot print_timing: id  0 | task 105 | n_gen =    150, tg =  48.94 t/s, tg_3s =  49.27 t/s
+0.19.526.825 I slot print_timing: id  0 | task 105 | n_gen =    365, tg =  59.52 t/s, tg_3s =  70.01 t/s
+0.21.756.666 I slot print_timing: id  0 | task 105 | prompt eval time =     306.97 ms /    57 tokens (    5.39 ms per token,   185.69 tokens per second)
+0.21.756.673 I slot print_timing: id  0 | task 105 |        eval time =    8345.22 ms /   512 tokens (   16.33 ms per token,    61.23 tokens per second)
+0.21.756.674 I slot print_timing: id  0 | task 105 |       total time =    8652.19 ms /   569 tokens
+0.21.756.674 I slot print_timing: id  0 | task 105 |    graphs reused =        197
+0.21.756.678 I slot print_timing: id  0 | task 105 | draft acceptance = 0.58321 (  410 accepted /   703 generated), mean len =  5.06
+0.21.756.712 I slot      release: id  0 | task 105 | stop processing: n_tokens = 568, truncated = 0
+0.21.759.425 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = 930961440
+0.21.936.038 I slot launch_slot_: id  0 | task 209 | processing task, is_child = 0
+0.25.859.259 I slot print_timing: id  0 | task 209 | n_gen =    101, tg =  27.00 t/s, tg_3s =  27.27 t/s
+0.28.907.613 I slot print_timing: id  0 | task 209 | n_gen =    170, tg =  25.03 t/s, tg_3s =  22.64 t/s
+0.31.971.863 I slot print_timing: id  0 | task 209 | n_gen =    244, tg =  24.76 t/s, tg_3s =  24.15 t/s
+0.35.031.078 I slot print_timing: id  0 | task 209 | n_gen =    333, tg =  25.79 t/s, tg_3s =  29.09 t/s
+0.38.092.788 I slot print_timing: id  0 | task 209 | n_gen =    412, tg =  25.79 t/s, tg_3s =  25.80 t/s
+0.41.033.410 I slot print_timing: id  0 | task 209 | prompt eval time =     219.93 ms /    52 tokens (    4.23 ms per token,   236.44 tokens per second)
+0.41.033.416 I slot print_timing: id  0 | task 209 |        eval time =   18877.42 ms /   512 tokens (   36.94 ms per token,    27.07 tokens per second)
+0.41.033.417 I slot print_timing: id  0 | task 209 |       total time =   19097.35 ms /   564 tokens
+0.41.033.417 I slot print_timing: id  0 | task 209 |    graphs reused =        421
+0.41.033.422 I slot print_timing: id  0 | task 209 | draft acceptance = 0.17691 (  282 accepted /  1594 generated), mean len =  2.24
+0.41.033.453 I slot      release: id  0 | task 209 | stop processing: n_tokens = 563, truncated = 0

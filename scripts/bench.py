@@ -56,10 +56,11 @@ def diff(a):
     sys.exit(0 if same == len(A) else 1)
 
 
-p = argparse.ArgumentParser()
-sp = p.add_subparsers(dest="cmd", required=True)
-r = sp.add_parser("run"); r.add_argument("url"); r.add_argument("out")
-r.add_argument("--max-tokens", type=int, default=512); r.add_argument("--token", default="")
-d = sp.add_parser("diff"); d.add_argument("a"); d.add_argument("b")
-a = p.parse_args()
-run(a) if a.cmd == "run" else diff(a)
+if __name__ == "__main__":
+    p = argparse.ArgumentParser()
+    sp = p.add_subparsers(dest="cmd", required=True)
+    r = sp.add_parser("run"); r.add_argument("url"); r.add_argument("out")
+    r.add_argument("--max-tokens", type=int, default=512); r.add_argument("--token", default="")
+    d = sp.add_parser("diff"); d.add_argument("a"); d.add_argument("b")
+    a = p.parse_args()
+    run(a) if a.cmd == "run" else diff(a)

@@ -1,0 +1,3 @@
+email  split@96: plain chose ' wanted' (-0.972) over ' got' (-0.996); gap 0.024 nats; dflash wrote 'got back fro'
+code   split@227: plain chose ' exceeds' (-0.988) over ' is' (-0.989); gap 0.001 nats; dflash wrote 'is full, the'
+story  split@88: plain chose ' shri' (-1.195) over ' w' (-1.196); gap 0.001 nats; dflash wrote 'wail that ha'

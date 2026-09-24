@@ -5,7 +5,7 @@
 set -euo pipefail
 
 MODEL_DIR="${MODEL_DIR:-/mnt/gcs}"
-TARGET="${TARGET:-Ternary-Bonsai-2-27B-PTQ1_0.gguf}"
+TARGET="${TARGET:-Ternary-Bonsai-2-27B-PQ2_0.gguf}"                # with DFlash2, PQ2_0 beats PTQ1_0 on all 3 prompts on L4 (results/smoke-2026-09-24)
 DRAFT="${DRAFT-Qwen3.8-27B-DFlash2-r3-Q4_K_M.gguf}"   # empty string = plain decode, no speculation
 COPY_TO_SHM="${COPY_TO_SHM:-1}"                        # 0 = read straight from MODEL_DIR
 COPY_STREAMS="${COPY_STREAMS:-8}"                      # parallel range reads per file

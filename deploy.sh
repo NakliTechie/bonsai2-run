@@ -12,7 +12,7 @@ IMAGE="${IMAGE:-ghcr.io/naklitechie/bonsai2-run:latest}"
 GPU_TYPE="${GPU_TYPE:-nvidia-l4}"                   # or nvidia-rtx-pro-6000 (needs CPU=20 MEMORY=80Gi)
 CPU="${CPU:-8}"; MEMORY="${MEMORY:-32Gi}"; CONCURRENCY="${CONCURRENCY:-4}"
 PREFIX="${PREFIX:-bonsai2}"
-TARGET="${TARGET:-Ternary-Bonsai-2-27B-PTQ1_0.gguf}"
+TARGET="${TARGET:-Ternary-Bonsai-2-27B-PQ2_0.gguf}"
 DRAFT="${DRAFT-Qwen3.8-27B-DFlash2-r3-Q4_K_M.gguf}"
 TARGET_REPO=prism-ml/Ternary-Bonsai-2-27B-gguf; DRAFT_REPO=naklitechie/Qwen3.8-27B-DFlash2-ternary-bonsai2
 ENV_EXTRA="${ENV_EXTRA:-}"                          # extra entrypoint knobs, e.g. CTX=32768,DRAFT_N_MAX=5

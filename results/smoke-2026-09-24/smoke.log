@@ -1,0 +1,30 @@
+[2026-09-24 01:09:08] GPU: NVIDIA L4, 535.216.01, 23034 MiB
+[2026-09-24 01:09:14] PTQ1_0-plain: ready in 5.492097874s (local disk -> /dev/shm -> GPU)
+email   250 tok  tg   32.88 tok/s  wall   7.81s
+code    512 tok  tg   32.83 tok/s  wall  15.97s
+story   512 tok  tg   32.70 tok/s  wall  16.04s
+[PTQ1_0-plain] vram used: 6984 MiB
+[2026-09-24 01:10:01] PTQ1_0-dflash: ready in 6.610831102s (local disk -> /dev/shm -> GPU)
+email   206 tok  tg   18.56 tok/s  wall  11.58s accept 117/623
+code    512 tok  tg   40.72 tok/s  wall  13.09s accept 409/710
+story   512 tok  tg   18.83 tok/s  wall  27.61s accept 290/1528
+[PTQ1_0-dflash] vram used: 9818 MiB
+email  DIFFERS at char 96: 'wanted to share a little bit of my weeke' vs 'got back from the most wonderful hike up'
+code   DIFFERS at char 227: 'exceeds its capacity, the\nleast-recently' vs 'is full, the least-recently-used\nentry i'
+story  DIFFERS at char 88: 'shriek that had worn the edges of the li' vs 'wail that had worn the stone of the ligh'
+parity 0/3
+[2026-09-24 01:11:01] PQ2_0-plain: ready in 6.244948510s (local disk -> /dev/shm -> GPU)
+email   226 tok  tg   29.67 tok/s  wall   7.77s
+code    512 tok  tg   29.66 tok/s  wall  17.57s
+story   512 tok  tg   29.58 tok/s  wall  17.63s
+[PQ2_0-plain] vram used: 8128 MiB
+[2026-09-24 01:11:53] PQ2_0-dflash: ready in 7.503099948s (local disk -> /dev/shm -> GPU)
+email   251 tok  tg   29.19 tok/s  wall   9.03s accept 149/714
+code    512 tok  tg   61.23 tok/s  wall   8.82s accept 410/703
+story   512 tok  tg   27.07 tok/s  wall  19.28s accept 282/1594
+[PQ2_0-dflash] vram used: 10960 MiB
+email  DIFFERS at char 287: 'at rare, crisp kind of cool that makes y' vs 'is rare, crisp kind of cool that makes y'
+code   DIFFERS at char 276: ' on insertion.\n"""\n\nfrom __future__ impo' vs '.\n"""\n\nfrom __future__ import annotation'
+story  DIFFERS at char 728: 'the haunting.\n\nThe mail boat, *The Pelic' vs 'it. Or so he believed.\n\nThe mail boat, *'
+parity 0/3
+[2026-09-24 01:12:32] SMOKE DONE

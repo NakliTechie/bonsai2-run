@@ -1,0 +1,3 @@
+email  split@287: plain chose ' that' (-1.447) over ' this' (-1.460); gap 0.013 nats; dflash wrote 'is rare, cri'
+code   split@276: plain chose ' on' (-1.110) over '.' (-1.121); gap 0.011 nats; dflash wrote '.\n"""\n\nfrom '
+story  split@728: plain chose ' the' (-1.052) over ' it' (-1.059); gap 0.008 nats; dflash wrote 'it. Or so he'

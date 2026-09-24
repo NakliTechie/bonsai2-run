@@ -35,5 +35,5 @@ fast: is the endpoint up and what does it cost, what is missing, what is the nex
 
 ## Knobs (entrypoint env)
 
-`MODEL_DIR` `/mnt/gcs` · `TARGET` PTQ1_0 GGUF · `DRAFT` drafter GGUF (empty = plain decode) · `COPY_TO_SHM` 1 ·
+`MODEL_DIR` `/mnt/gcs` · `TARGET` PQ2_0 GGUF · `DRAFT` drafter GGUF (empty = plain decode) · `COPY_TO_SHM` 1 ·
 `COPY_STREAMS` 8 · `CTX` 16384 · `PARALLEL` 1 · `DRAFT_N_MAX` 7 · `EXTRA_ARGS` passed through to `llama-server`.

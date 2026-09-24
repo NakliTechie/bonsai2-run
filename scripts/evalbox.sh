@@ -14,6 +14,7 @@ OFF_LIMITS="${OFF_LIMITS:-humaneval:164 mbpp:100 gsm8k:100 mtbench:80}"; ON_LIMI
 OFF_MAX="${OFF_MAX:-1024}"; ON_MAX="${ON_MAX:-4096}"; TAG="${TAG:-}"; AFTER_LOG="${AFTER_LOG:-}"
 SERVER_CTX="${SERVER_CTX:-8192}"; TOPUP_MAX="${TOPUP_MAX:-}"; TOPUP_N="${TOPUP_N:-40}"
 CONFIGS="${CONFIGS:-PQ2_0-plain PTQ1_0-plain PQ2_0-dflash}"
+AFTER_FROM=$(( $( [ -n "$AFTER_LOG" ] && wc -l < "$AFTER_LOG" 2>/dev/null || echo 0) + 1 ))   # only lines written after we start count
 UNITS="${UNITS:-PQ2_0 plain on;PTQ1_0 plain on;PQ2_0 dflash on;PQ2_0 plain off;PTQ1_0 plain off;PQ2_0 dflash off}"
 mkdir -p "$OUT"; log() { echo "[$(date '+%F %T')] $*" | tee -a "$OUT/evalbox$TAG.log"; }
 
@@ -34,7 +35,7 @@ topup_ids() {  # set -> file of ids truncated by any config (waits for all confi
 }
 
 unit() {  # gpu quant mode think [set]
-  local g=$1 q=$2 m=$3 th=$4 port=$((8090 + $1)) name="b2r$1" dir="$OUT/$2-$3/$4" limits mt flag=""
+  local g=$1 q=$2 m=$3 th=$4 port=$((8090 + $1)) name="b2r${TAG}$1" dir="$OUT/$2-$3/$4" limits mt flag=""
   mkdir -p "$dir"; [ "$th" = on ] && { limits=$ON_LIMITS; flag="--think"; mt=$ON_MAX; } || { limits=$OFF_LIMITS; mt=$OFF_MAX; }
   local d=()   # mode -> container env; the dir name keeps the mode, so every mode is its own config in score.py
   case "$m" in
@@ -72,7 +73,7 @@ unit() {  # gpu quant mode think [set]
 
 worker() {
   local g=$1 u
-  [ -z "$AFTER_LOG" ] || until grep -q "gpu$g: queue empty" "$AFTER_LOG"; do sleep 30; done
+  [ -z "$AFTER_LOG" ] || until tail -n "+$AFTER_FROM" "$AFTER_LOG" 2>/dev/null | grep -q "gpu$g: queue empty"; do sleep 30; done
   while u=$(pop) && [ -n "$u" ]; do unit "$g" $u; done; log "gpu$g: queue empty"
 }
 

@@ -1,0 +1,20 @@
+[2026-09-24 06:23:02] start: 4 GPUs, image bonsai2-run:dev
+[2026-09-24 06:23:11] gpu0 PQ2_0-dflash-on: top-up mtbench (8 ids, max 16384)
+[2026-09-24 06:23:11] gpu2 PQ2_0-dflash-on: top-up humaneval (7 ids, max 16384)
+[2026-09-24 06:23:11] gpu3 PQ2_0-dflash-on: top-up math500 (8 ids, max 16384)
+[2026-09-24 06:23:12] gpu1 PQ2_0-dflash-on: top-up mbpp (8 ids, max 16384)
+[2026-09-24 06:31:07] gpu3 PQ2_0-dflash-on: unit done
+[2026-09-24 06:31:13] gpu3 PTQ1_0-plain-on: top-up mtbench (8 ids, max 16384)
+[2026-09-24 06:49:23] gpu0 PQ2_0-dflash-on: unit done
+[2026-09-24 06:49:29] gpu0 PTQ1_0-plain-on: top-up mbpp (8 ids, max 16384)
+[2026-09-24 06:51:18] gpu1 PQ2_0-dflash-on: unit done
+[2026-09-24 06:51:26] gpu1 PQ2_0-dflash-on: top-up gsm8k (1 ids, max 16384)
+[2026-09-24 06:52:21] gpu1 PQ2_0-dflash-on: unit done
+[2026-09-24 06:52:21] gpu1: queue empty
+[2026-09-24 06:53:13] gpu3 PTQ1_0-plain-on: unit done
+[2026-09-24 06:53:13] gpu3: queue empty
+[2026-09-24 06:58:36] gpu2 PQ2_0-dflash-on: unit done
+[2026-09-24 06:58:36] gpu2: queue empty
+[2026-09-24 07:08:29] gpu0 PTQ1_0-plain-on: unit done
+[2026-09-24 07:08:29] gpu0: queue empty
+[2026-09-24 07:08:31] EVALBOX DONE

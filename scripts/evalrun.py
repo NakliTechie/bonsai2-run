@@ -22,7 +22,7 @@ with open(a.out, "a") as f:
     for r in rows:
         if r["id"] in done:
             continue
-        body = {"messages": [{"role": "user", "content": r["prompt"]}], "temperature": 0, "max_tokens": a.max_tokens,
+        body = {"messages": r.get("messages") or [{"role": "user", "content": r["prompt"]}], "temperature": 0, "max_tokens": a.max_tokens,
                 "chat_template_kwargs": {"enable_thinking": a.think}}
         req = urllib.request.Request(url, json.dumps(body).encode(), {"Content-Type": "application/json"})
         t = time.time()

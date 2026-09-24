@@ -3,7 +3,7 @@
 Subsets use a seed-0 shuffle, so every config sees the same ids. Needs `datasets`.
 
   evalset.py OUT_DIR [SET ...]            # default: all sets
-Writes OUT_DIR/{humaneval,mbpp,gsm8k,mtbench,math500}.jsonl with fields: id, prompt, plus what the scorer needs.
+Writes OUT_DIR/{humaneval,mbpp,gsm8k,mtbench,math500,sb_sum,sb_rag,codeedit}.jsonl (mtbench_t2 needs a turn-1 run; see evalset_t2.py) with fields: id, prompt, plus what the scorer needs.
 """
 import json, os, random, sys, urllib.request
 from datasets import load_dataset
@@ -55,3 +55,20 @@ if want("math500"):
     dump("math500", [{"id": r["unique_id"], "answer": r["answer"], "level": r["level"],
                       "prompt": f"{r['problem']}\nReason step by step, and put your final answer within \\boxed{{}}."}
                      for r in ma])
+
+SPECBENCH = "https://raw.githubusercontent.com/hemingkx/Spec-Bench/main/data/spec_bench/question.jsonl"
+if want("sb_sum") or want("sb_rag"):
+    sb = [json.loads(l) for l in urllib.request.urlopen(SPECBENCH).read().decode().splitlines() if l.strip()]
+    for cat, name in (("summarization", "sb_sum"), ("rag", "sb_rag")):
+        if want(name):
+            dump(name, [{"id": f"{name}/{q['question_id']}", "prompt": q["turns"][0]} for q in sb if q["category"] == cat])
+
+if want("codeedit"):  # copy-heavy code task: rewrite a given, correct function; behaviour checked with HumanEval's tests
+    he = load_dataset("openai/openai_humaneval", split="test")
+    rows = [{"id": f"codeedit/{r['task_id']}", "entry_point": r["entry_point"], "code_prompt": "", "test": r["test"],
+             "prompt": "Refactor the following Python function for readability: use descriptive variable names and add brief "
+                       "comments, but keep its behaviour exactly the same. Reply with the complete function, including the "
+                       f"signature and docstring, in a single {FENCE}python code block.\n\n{FENCE}python\n{r['prompt']}{r['canonical_solution']}{FENCE}"}
+            for r in he]
+    random.Random(1).shuffle(rows)
+    dump("codeedit", rows[:80])

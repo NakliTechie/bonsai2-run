@@ -16,7 +16,7 @@ SPEED_ONLY = "--speed-only" in sys.argv
 EXT = "--extended" in sys.argv
 SUFFIX = "-extended" if EXT else ""
 SETS = {n: {r["id"]: r for r in map(json.loads, open(f"{sets_dir}/{n}.jsonl"))}
-        for n in ("humaneval", "mbpp", "gsm8k", "mtbench", "math500") if os.path.exists(f"{sets_dir}/{n}.jsonl")}
+        for n in ("humaneval", "mbpp", "gsm8k", "mtbench", "math500", "sb_sum", "sb_rag", "codeedit", "mtbench_t2") if os.path.exists(f"{sets_dir}/{n}.jsonl")}
 
 
 def code_of(text):
@@ -26,7 +26,7 @@ def code_of(text):
 
 def program(set_name, item, content):
     code = code_of(content)
-    if set_name == "humaneval":
+    if set_name in ("humaneval", "codeedit"):
         if f"def {item['entry_point']}" not in code:
             code = item["code_prompt"] + code
         return f"{code}\n\n{item['test']}\n\ncheck({item['entry_point']})\n"
@@ -115,7 +115,7 @@ for (config, think, set_name), rows in sorted(data.items()):
     items = SETS[set_name]
     if SPEED_ONLY:
         correct = {}
-    elif set_name in ("humaneval", "mbpp"):
+    elif set_name in ("humaneval", "mbpp", "codeedit"):
         correct = run_programs({r["id"]: program(set_name, items[r["id"]], r["content"]) for r in rows})
     elif set_name == "gsm8k":
         correct = {r["id"]: gsm_ok(items[r["id"]], r["content"]) for r in rows}

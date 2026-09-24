@@ -2,7 +2,9 @@
 """Score and aggregate a benchmark results dir. Generated code runs inside `docker run --network none`.
 
   score.py SETS_DIR RESULTS_DIR [--speed-only] [--extended]   # writes RESULTS_DIR/summary[-extended].{md,json}
---extended: rows from <set>.topup.jsonl (truncated thinking runs re-run with a higher token limit) replace the capped rows.
+--extended: rows from <set>.topup.jsonl (truncated thinking runs re-run with a higher token limit) replace the capped rows;
+ids still truncated at the higher limit in ANY config are then dropped from ALL configs (paired). Those are mostly
+greedy repetition loops, which a drafter predicts almost perfectly, so keeping them inflates speculative tok/s.
 Speed is aggregate (total tokens / total time). Speedups are also given per prompt, paired by id, as median [p25-p75],
 against the same-quant plain run and against the fastest plain run (PTQ1_0 plain).
 RESULTS_DIR/<config>/<think>/<set>.jsonl, config = <quant>-<plain|dflash>, think = off|on.
@@ -93,14 +95,23 @@ def copied(item, content):  # share of the answer's chars that are verbatim runs
 
 
 summary = []
+data = {}
 for path in sorted(p for p in glob.glob(f"{res}/*/*/*.jsonl") if not p.endswith(".topup.jsonl")):
     config, think, set_name = path.split("/")[-3], path.split("/")[-2], os.path.basename(path)[:-6]
     rows = [json.loads(l) for l in open(path)]
     if EXT and os.path.exists(path[:-6] + ".topup.jsonl"):
         top = {r["id"]: r for r in map(json.loads, open(path[:-6] + ".topup.jsonl"))}
         rows = [top.get(r["id"], r) for r in rows]
-    if not rows:
-        continue
+    data[(config, think, set_name)] = rows
+dropped = {}
+if EXT:
+    for (config, think, set_name), rows in data.items():
+        if think == "on":
+            dropped.setdefault((think, set_name), set()).update(r["id"] for r in rows if r["finish"] == "length")
+    for k in data:
+        data[k] = [r for r in data[k] if r["id"] not in dropped.get((k[1], k[2]), set())]
+
+for (config, think, set_name), rows in sorted(data.items()):
     items = SETS[set_name]
     if SPEED_ONLY:
         correct = {}
@@ -167,4 +178,7 @@ with open(f"{res}/summary{SUFFIX}.md", "w") as f:
             r = sorted(d["per_id_tps"][i] / b["per_id_tps"][i] for i in ids)
             dn = sum(rows[i]["draft_n"] or 0 for i in ids); da = sum(rows[i]["draft_accepted"] or 0 for i in ids)
             f.write(f"| {th} | {c} | {len(ids)} | {r[len(r) // 2]:.2f}x | {da / dn:.2f} |\n" if dn else "")
+    if dropped:
+        f.write("\nDropped (still truncated at the top-up limit in some config, removed from all configs): "
+                + "; ".join(f"{t}/{sn}: {len(v)}" for (t, sn), v in sorted(dropped.items()) if v) + "\n")
 print(open(f"{res}/summary{SUFFIX}.md").read())

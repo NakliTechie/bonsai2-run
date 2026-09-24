@@ -7,7 +7,8 @@ FROM docker.io/nvidia/cuda:${CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION} AS buil
 # PrismML-Eng/llama.cpp prism head 2026-09-24 (has the Hadamard borrow fix, PrismML #210); patches/ adds DFlash2 (ggml-org #27816).
 ARG PRISM_SHA=ee8ad0ef6b03b34b8709ea9440a4b3927e8a6524
 ARG CUDA_ARCHS="89;120"
-RUN apt-get update && apt-get install -y --no-install-recommends git cmake build-essential ca-certificates \
+# retried: Ubuntu mirrors 404 mid-sync now and then (seen 2026-09-24 on libexpat1)
+RUN for i in 1 2 3; do apt-get update && apt-get install -y --no-install-recommends --fix-missing git cmake build-essential ca-certificates && break; sleep 20; done \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 RUN git init -q . && git remote add origin https://github.com/PrismML-Eng/llama.cpp.git \
@@ -21,7 +22,7 @@ RUN cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=ON -DGGML_NATIVE=OFF \
     && strip build/bin/llama-server
 
 FROM docker.io/nvidia/cuda:${CUDA_VERSION}-runtime-ubuntu${UBUNTU_VERSION}
-RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 curl ca-certificates \
+RUN for i in 1 2 3; do apt-get update && apt-get install -y --no-install-recommends --fix-missing libgomp1 curl ca-certificates && break; sleep 20; done \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /src/build/bin/llama-server /app/llama-server
 COPY entrypoint.sh /app/entrypoint.sh

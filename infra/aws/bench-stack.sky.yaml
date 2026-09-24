@@ -49,6 +49,9 @@ setup: |
 run: |
   set -uo pipefail
   export PATH="$HOME/.local/bin:$PATH"; OUT=results/bench-stack-2026-09-24; export OUT; mkdir -p $OUT
+  # build here too (setup does not stop on a failed build); abort the run without an image
+  docker image inspect bonsai2-run:dev >/dev/null 2>&1 || docker build -t bonsai2-run:dev . > ~/build.log 2>&1 || { echo "BUILD FAILED"; tail -20 ~/build.log; exit 1; }
+  rm -f $OUT/.queue*   # a queue left by an aborted run would start empty
   TAG=-new UNITS="PQ2_0 ngram off;PTQ1_0 plain off;PQ2_0 dflash off;PQ2_0 stack off;PQ2_0 stackloose off" \
     OFF_LIMITS="sb_sum:80 sb_rag:80 codeedit:80 mtbench_t2:80" bash scripts/evalbox.sh & A=$!
   TAG=-old AFTER_LOG=$OUT/evalbox-new.log UNITS="PQ2_0 stack off;PQ2_0 stackloose off;PQ2_0 dflash off" \

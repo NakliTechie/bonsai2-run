@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Score and aggregate a benchmark results dir. Generated code runs inside `docker run --network none`.
 
-  score.py SETS_DIR RESULTS_DIR          # writes RESULTS_DIR/summary.md and summary.json
+  score.py SETS_DIR RESULTS_DIR [--speed-only]   # writes RESULTS_DIR/summary.md and summary.json
+Speed is aggregate (total tokens / total time). Speedups are also given per prompt, paired by id, as median [p25-p75],
+against the same-quant plain run and against the fastest plain run (PTQ1_0 plain).
 RESULTS_DIR/<config>/<think>/<set>.jsonl, config = <quant>-<plain|dflash>, think = off|on.
 """
 import glob, json, os, re, subprocess, sys, tempfile
 
 sets_dir, res = sys.argv[1], sys.argv[2]
+SPEED_ONLY = "--speed-only" in sys.argv
 SETS = {n: {r["id"]: r for r in map(json.loads, open(f"{sets_dir}/{n}.jsonl"))} for n in ("humaneval", "mbpp", "gsm8k", "mtbench")}
 
 
@@ -57,7 +60,9 @@ for path in sorted(glob.glob(f"{res}/*/*/*.jsonl")):
     if not rows:
         continue
     items = SETS[set_name]
-    if set_name in ("humaneval", "mbpp"):
+    if SPEED_ONLY:
+        correct = {}
+    elif set_name in ("humaneval", "mbpp"):
         correct = run_programs({r["id"]: program(set_name, items[r["id"]], r["content"]) for r in rows})
     elif set_name == "gsm8k":
         correct = {r["id"]: gsm_ok(items[r["id"]], r["content"]) for r in rows}
@@ -66,21 +71,40 @@ for path in sorted(glob.glob(f"{res}/*/*/*.jsonl")):
     tok = sum(r["completion_tokens"] for r in rows)
     ms = sum(r["predicted_ms"] or 0 for r in rows)
     dn = sum(r["draft_n"] or 0 for r in rows); da = sum(r["draft_accepted"] or 0 for r in rows)
+    wall = sum(r["wall_s"] for r in rows)
     summary.append({"config": config, "think": think, "set": set_name, "n": len(rows), "tokens": tok,
-                    "tps": round(tok / (ms / 1000), 2) if ms else None,
+                    "tps": round(tok / (ms / 1000), 2) if ms else None, "e2e_tps": round(tok / wall, 2),
+                    "per_id_tps": {r["id"]: r["completion_tokens"] / (r["predicted_ms"] / 1000) for r in rows if r["predicted_ms"]},
                     "accept": round(da / dn, 3) if dn else None,
                     "tau": round(tok / (tok - da), 2) if dn and tok > da else None,   # tokens per target forward pass
                     "truncated": sum(r["finish"] == "length" for r in rows),
                     "score": round(sum(correct.values()) / len(correct), 3) if correct else None,
                     "correct_ids": sorted(k for k, v in correct.items() if v)})
 
-json.dump(summary, open(f"{res}/summary.json", "w"), indent=1)
-base = {(s["think"], s["set"], s["config"].split("-")[0]): s for s in summary if s["config"].endswith("plain")}
+
+def paired(s, b):  # median [p25-p75] of per-prompt speedup over ids present in both runs
+    ids = sorted(set(s["per_id_tps"]) & set(b["per_id_tps"]))
+    if not ids or s is b:
+        return ""
+    r = sorted(s["per_id_tps"][i] / b["per_id_tps"][i] for i in ids)
+    q = lambda f: r[min(len(r) - 1, int(f * len(r)))]
+    return f"{q(0.5):.2f}x [{q(0.25):.2f}-{q(0.75):.2f}] n={len(ids)}"
+
+
+def agg(s, b):
+    return f"{s['tps'] / b['tps']:.2f}x" if b and s is not b and s["tps"] and b["tps"] else ""
+
+
+json.dump([{k: v for k, v in s.items() if k != "per_id_tps"} for s in summary], open(f"{res}/summary.json", "w"), indent=1)
+idx = {(s["think"], s["set"], s["config"]): s for s in summary}
 with open(f"{res}/summary.md", "w") as f:
-    f.write("| think | set | config | n | tok/s | vs plain same quant | accept | tau | score | truncated |\n|---|---|---|---|---|---|---|---|---|---|\n")
+    f.write("| think | set | config | n | decode tok/s | e2e tok/s | vs same-quant plain (agg; per-prompt median [IQR]) | vs PTQ1_0 plain (agg; per-prompt) | accept | tau | score | trunc |\n")
+    f.write("|---|---|---|---|---|---|---|---|---|---|---|---|\n")
     for s in sorted(summary, key=lambda s: (s["think"], s["set"], s["config"])):
-        b = base.get((s["think"], s["set"], s["config"].split("-")[0]))
-        sp = f"{s['tps'] / b['tps']:.2f}x" if b and s["tps"] and b["tps"] and b is not s else ""
-        f.write(f"| {s['think']} | {s['set']} | {s['config']} | {s['n']} | {s['tps']} | {sp} | {s['accept'] or ''} | "
-                f"{s['tau'] or ''} | {'' if s['score'] is None else s['score']} | {s['truncated']} |\n")
+        same = idx.get((s["think"], s["set"], s["config"].split("-")[0] + "-plain"))
+        fast = idx.get((s["think"], s["set"], "PTQ1_0-plain"))
+        c1 = f"{agg(s, same)}; {paired(s, same)}" if same and same is not s else ""
+        c2 = f"{agg(s, fast)}; {paired(s, fast)}" if fast and fast is not s else ""
+        f.write(f"| {s['think']} | {s['set']} | {s['config']} | {s['n']} | {s['tps']} | {s['e2e_tps']} | {c1} | {c2} | "
+                f"{s['accept'] or ''} | {s['tau'] or ''} | {'' if s['score'] is None else s['score']} | {s['truncated']} |\n")
 print(open(f"{res}/summary.md").read())

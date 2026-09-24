@@ -15,6 +15,9 @@ resources:
   any_of:
     - {region: us-east-2, instance_type: g6.12xlarge, use_spot: false}
     - {region: us-west-2, instance_type: g6.12xlarge, use_spot: false}
+    - {region: eu-south-2, instance_type: g6.12xlarge, use_spot: false}
+    - {region: ap-northeast-2, instance_type: g6.12xlarge, use_spot: false}
+    - {region: ap-south-1, instance_type: g6.12xlarge, use_spot: false}
 
 workdir: .
 

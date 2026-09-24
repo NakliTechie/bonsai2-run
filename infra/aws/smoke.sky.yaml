@@ -1,0 +1,40 @@
+# bonsai2-run CUDA smoke box: one NVIDIA L4 (sm_89, the Cloud Run L4 part). Builds the image on the box,
+# stages both target GGUFs + the DFlash2 drafter on local disk, then idles for `sky exec` of scripts/smoke.sh.
+# Runs under the cairn-skypilot key (as dflash-mlx-bonsai2 lab/aws did); cairn=true is the IAM destructive gate.
+name: bonsai2-run-smoke
+
+resources:
+  cloud: aws
+  disk_size: 120
+  labels:
+    cairn: "true"
+    cairn-purpose: "bonsai2-run"
+  any_of:                         # on-demand: spot L4s were reclaimed within minutes on 2026-09-20
+    - {region: us-east-2, instance_type: g6.4xlarge, use_spot: false}
+    - {region: us-west-2, instance_type: g6.4xlarge, use_spot: false}
+    - {region: eu-south-2, instance_type: g6.4xlarge, use_spot: false}
+    - {region: us-east-2, instance_type: g6.8xlarge, use_spot: false}
+
+workdir: .
+
+setup: |
+  set -uo pipefail
+  nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
+  docker info --format '{{.ServerVersion}} runtimes={{json .Runtimes}}' 2>&1 | head -1
+  if ! docker run --rm --gpus all nvidia/cuda:12.8.1-base-ubuntu24.04 nvidia-smi -L; then
+    echo ">>> installing nvidia-container-toolkit"
+    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    sudo apt-get update -qq && sudo apt-get install -y -qq nvidia-container-toolkit && sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
+    docker run --rm --gpus all nvidia/cuda:12.8.1-base-ubuntu24.04 nvidia-smi -L
+  fi
+  curl -LsSf https://astral.sh/uv/install.sh | sh > /dev/null 2>&1; export PATH="$HOME/.local/bin:$PATH"
+  uv tool install -q "huggingface_hub[cli]" >/dev/null 2>&1
+  mkdir -p ~/models
+  ( hf download prism-ml/Ternary-Bonsai-2-27B-gguf Ternary-Bonsai-2-27B-PTQ1_0.gguf Ternary-Bonsai-2-27B-PQ2_0.gguf --local-dir ~/models >/dev/null 2>&1 \
+    && hf download naklitechie/Qwen3.8-27B-DFlash2-ternary-bonsai2 Qwen3.8-27B-DFlash2-r3-Q4_K_M.gguf --local-dir ~/models >/dev/null 2>&1 \
+    && echo ">>> models ready: $(ls -la ~/models/*.gguf | awk '{print $5, $9}' | tr '\n' ' ')" ) &
+  DL=$!
+  t=$(date +%s); docker build -t bonsai2-run:dev . > ~/build.log 2>&1 && echo ">>> image built in $(( $(date +%s) - t ))s: $(docker image ls bonsai2-run:dev --format '{{.Size}}')" || { echo ">>> BUILD FAILED"; tail -40 ~/build.log; }
+  wait $DL
+  df -h / | tail -1

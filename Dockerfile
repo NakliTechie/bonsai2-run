@@ -7,6 +7,7 @@ FROM docker.io/nvidia/cuda:${CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION} AS buil
 # PrismML-Eng/llama.cpp prism head 2026-09-24 (has the Hadamard borrow fix, PrismML #210); patches/ adds DFlash2 (ggml-org #27816).
 ARG PRISM_SHA=ee8ad0ef6b03b34b8709ea9440a4b3927e8a6524
 ARG CUDA_ARCHS="89;120"
+ARG JOBS=""   # compile parallelism; empty = nproc (bound it on big builders: unbounded nvcc OOMs, INCIDENTS #10)
 # retried: Ubuntu mirrors 404 mid-sync now and then (seen 2026-09-24 on libexpat1)
 RUN ok=; for i in 1 2 3; do apt-get update && apt-get install -y --no-install-recommends --fix-missing git cmake build-essential ca-certificates && ok=1 && break; sleep 20; done; [ -n "$ok" ] \
     && rm -rf /var/lib/apt/lists/*
@@ -18,7 +19,7 @@ RUN git -c user.name=build -c user.email=build@localhost am -q /patches/*.patch
 RUN cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=ON -DGGML_NATIVE=OFF \
         -DCMAKE_CUDA_ARCHITECTURES="${CUDA_ARCHS}" -DBUILD_SHARED_LIBS=OFF \
         -DLLAMA_BUILD_UI=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF \
-    && cmake --build build --target llama-server -j"$(nproc)" \
+    && cmake --build build --target llama-server -j"${JOBS:-$(nproc)}" \
     && strip build/bin/llama-server
 
 FROM docker.io/nvidia/cuda:${CUDA_VERSION}-runtime-ubuntu${UBUNTU_VERSION}

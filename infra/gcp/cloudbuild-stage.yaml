@@ -1,0 +1,19 @@
+# Stage the GGUFs straight from Hugging Face into the model bucket (no local upload).
+#   gcloud builds submit --no-source --config infra/gcp/cloudbuild-stage.yaml --substitutions _BUCKET=<bucket>,_PREFIX=bonsai2
+steps:
+  - name: python:3.12-slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        pip install -q "huggingface_hub[cli]" && mkdir -p /workspace/m &&
+        hf download prism-ml/Ternary-Bonsai-2-27B-gguf Ternary-Bonsai-2-27B-PQ2_0.gguf --local-dir /workspace/m &&
+        hf download naklitechie/Qwen3.8-27B-DFlash2-ternary-bonsai2 Qwen3.8-27B-DFlash2-r3-Q4_K_M.gguf --local-dir /workspace/m &&
+        ls -la /workspace/m
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args: ["-c", "gcloud storage cp /workspace/m/*.gguf gs://${_BUCKET}/${_PREFIX}/ && gcloud storage ls -l gs://${_BUCKET}/${_PREFIX}/"]
+options:
+  machineType: E2_HIGHCPU_8
+  diskSizeGb: 50
+timeout: 3600s

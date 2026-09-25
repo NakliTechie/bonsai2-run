@@ -1,0 +1,10 @@
+# Build the serving image on Cloud Build and push it to Artifact Registry.
+#   gcloud builds submit --config infra/gcp/cloudbuild-image.yaml --substitutions _IMAGE=<region>-docker.pkg.dev/<project>/bonsai2/bonsai2-run:<tag> .
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "--build-arg", "JOBS=16", "-t", "${_IMAGE}", "."]
+images: ["${_IMAGE}"]
+options:
+  machineType: E2_HIGHCPU_32
+  diskSizeGb: 100
+timeout: 5400s

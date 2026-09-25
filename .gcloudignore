@@ -1,0 +1,8 @@
+# Cloud Build only needs the Dockerfile, patches/ and entrypoint.sh
+.git
+.gitignore
+results/
+plan/
+infra/
+scripts/
+*.md

@@ -6,9 +6,9 @@ set -uo pipefail
 cd "$(dirname "$0")" || exit 2
 
 BUCKET="${BUCKET:-}"
-REGION="${REGION:-us-central1}"                     # L4: us-central1 us-east4 europe-west1 europe-west4 asia-southeast1
+REGION="${REGION:-asia-southeast1}"                 # L4 quota approved (2026-09-25): asia-southeast1 us-east4 europe-west4 europe-west1
 SERVICE="${SERVICE:-bonsai2}"
-IMAGE="${IMAGE:-ghcr.io/naklitechie/bonsai2-run:latest}"
+IMAGE="${IMAGE:-}"                                  # default: $REGION-docker.pkg.dev/$PROJECT/bonsai2/bonsai2-run:latest
 GPU_TYPE="${GPU_TYPE:-nvidia-l4}"                   # or nvidia-rtx-pro-6000 (needs CPU=20 MEMORY=80Gi)
 CPU="${CPU:-8}"; MEMORY="${MEMORY:-32Gi}"; CONCURRENCY="${CONCURRENCY:-4}"
 PREFIX="${PREFIX:-bonsai2}"
@@ -24,6 +24,7 @@ preflight() {
   command -v gcloud >/dev/null || verdict NO_GCLOUD "brew install --cask google-cloud-sdk && gcloud auth login" 10
   PROJECT="$(gcloud config get-value project 2>/dev/null)"
   [ -n "$PROJECT" ] || verdict NO_PROJECT "gcloud config set project <id>" 11
+  IMAGE="${IMAGE:-$REGION-docker.pkg.dev/$PROJECT/bonsai2/bonsai2-run:latest}"
 }
 need_bucket() { [ -n "$BUCKET" ] || verdict NO_BUCKET "BUCKET=<name> ./deploy.sh stage" 12; }
 objects() { gcloud storage ls -l "gs://$BUCKET/$PREFIX/" 2>/dev/null | awk '$1 ~ /^[0-9]+$/ {n=split($3,p,"/"); print p[n], $1}'; }
@@ -57,6 +58,12 @@ cmd_stage() {
     step "create gs://$BUCKET in $REGION"
     gcloud storage buckets create "gs://$BUCKET" --location="$REGION" --uniform-bucket-level-access >/dev/null || verdict NO_BUCKET "check bucket name/permissions" 12
   }
+  if [ "${STAGE_VIA:-local}" = cloudbuild ]; then   # download from HF inside GCP: no local upload
+    step "stage via Cloud Build (infra/gcp/cloudbuild-stage.yaml)"
+    gcloud builds submit --region="$REGION" --no-source --config infra/gcp/cloudbuild-stage.yaml \
+      --substitutions "_BUCKET=$BUCKET,_PREFIX=$PREFIX" >/dev/null || verdict WEIGHTS_MISSING "gcloud builds list --region $REGION" 13
+    verdict OK "./deploy.sh deploy" 0
+  fi
   local have tmp; have="$(objects)"; tmp="${TMPDIR:-/tmp}/bonsai2-stage"; mkdir -p "$tmp"
   for f in $(files); do
     if echo "$have" | grep -q "^$f "; then step "skip $f (present, $(echo "$have" | awk -v f="$f" '$1==f{print $2}') bytes)"; continue; fi

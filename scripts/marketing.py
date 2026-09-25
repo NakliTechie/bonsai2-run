@@ -14,8 +14,8 @@ out = sys.argv[1] if len(sys.argv) > 1 else "marketing"
 os.makedirs(out, exist_ok=True)
 SURF, INK, INK2, MUTED, LINE, BLUE, TILE = "#fcfcfb", "#0b0b0b", "#52514e", "#8a8983", "#e6e5e0", "#2a78d6", "#f1f0ec"
 plt.rcParams.update({"font.family": "Helvetica Neue", "text.color": INK})
-STATS = [("9 min 38 s", "new project to live URL"), ("18 s", "container start"),
-         ("$0", "while idle"), ("148 tok/s", "code edit, one L4")]
+STATS = [("9 min 38 s", "new project to live URL"), ("23 s", "idle to first answer"),
+         ("$0", "GPU cost while idle"), ("148 tok/s", "code edit, one L4")]
 
 
 PAIRS = []   # (text artist, (x0, y0, x1, y1) box in data coords, name) checked before saving
@@ -51,7 +51,7 @@ fig, ax = canvas(1280, 640)
 ax.add_patch(FancyBboxPatch((0, 0), 16, 640, boxstyle="square,pad=0", fc=BLUE, ec="none"))
 ax.text(70, 560, "bonsai2-run", fontsize=30, color=BLUE, fontweight="bold", va="top")
 ax.text(70, 490, "A 27B model on one Cloud Run GPU.", fontsize=46, fontweight="bold", va="top")
-ax.text(70, 418, "$0 when nobody is using it.", fontsize=46, fontweight="bold", va="top", color=BLUE)
+ax.text(70, 418, "No GPU bill when nobody uses it.", fontsize=46, fontweight="bold", va="top", color=BLUE)
 for i, (big, small) in enumerate(STATS):
     tile(ax, 70 + i * 290, 120, 270, 150, big, small, 32, 16)
 ax.text(70, 62, "One script from Cloud Shell · Ternary Bonsai 2 27B + DFlash2 · OpenAI + Anthropic APIs · MIT",
@@ -84,7 +84,7 @@ PAIRS.append((ax.text(80 + 2 * 370 + 28, 352, "measured: 9 min 38 s\nfrom an emp
                       va="bottom", fontweight="bold", linespacing=1.4), (80 + 2 * 370, 330, 80 + 2 * 370 + 340, 660), "step 3 note"))
 for i, (big, small) in enumerate(STATS[1:] + [("~2.2x", "on math & code vs plain")]):
     tile(ax, 80 + i * 370, 100, 340, 170, big, small, 34, 16)
-ax.text(80, 50, "About $1.42 per active hour (L4 + 8 vCPU + 32 GiB, Tier-1 list price) · github.com/NakliTechie/bonsai2-run",
+ax.text(80, 50, "About $1.42 per active hour · model files about 17¢ a month · github.com/NakliTechie/bonsai2-run",
         fontsize=15, color=MUTED, va="center")
 for t in ax.texts:
     PAIRS.append((t, (0, 0, 1600, 900), "launch canvas"))

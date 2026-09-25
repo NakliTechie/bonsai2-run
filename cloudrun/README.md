@@ -1,6 +1,6 @@
 # Ternary Bonsai 2 27B + DFlash2 on Cloud Run: one script
 
-A 27B open-weight model behind an OpenAI-compatible API on one Google Cloud Run **NVIDIA L4**, with DFlash2
+A 27B open-weight model behind OpenAI- and Anthropic-compatible APIs on one Google Cloud Run **NVIDIA L4**, with DFlash2
 speculative decoding and prompt lookup. **$0 while idle**, about **$1.4 per active hour**.
 
 ## Run it
@@ -25,6 +25,8 @@ service and bucket). Put them before `bash`: `curl -fsSL … | PROFILE=chat bash
 ## What you get
 
 - ~2.2x decode on math and code vs plain decoding on the same L4; 148 tok/s on a copy-heavy code edit.
+- OpenAI-compatible `/v1/chat/completions` and Anthropic-compatible `/v1/messages`. The model thinks by default;
+  send `"chat_template_kwargs": {"enable_thinking": false}` to skip it.
 - Private by default: calls need `Authorization: Bearer $(gcloud auth print-identity-token)`, or run
   `gcloud run services proxy bonsai2 --region <region> --port 8080` for a local, token-free endpoint.
 - The first request after an idle spell waits for a GPU instance to start (tens of seconds).

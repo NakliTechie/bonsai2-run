@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>Ternary Bonsai 2 27B with DFlash2 speculative decoding on one Google Cloud Run L4 —<br>
-  an OpenAI-compatible endpoint that costs nothing while it sits idle.</strong>
+  an OpenAI- and Anthropic-compatible endpoint that costs nothing while it sits idle.</strong>
 </p>
 
 <p align="center">
@@ -39,7 +39,8 @@ curl -s $URL/v1/chat/completions -H "Authorization: Bearer $(gcloud auth print-i
 
 Needs a Google Cloud account with billing. A Free Trial account must be **upgraded to paid** first; Google
 keeps the unused credit, but GPUs and quota requests are blocked during the trial. `PROFILE=chat` picks the
-chat setting; `DOWN=1` deletes the service and bucket.
+chat setting; `DOWN=1` deletes the service and bucket. The same server also speaks Anthropic's Messages API at
+`/v1/messages`. The model thinks before answering by default; send `"chat_template_kwargs": {"enable_thinking": false}` for speed.
 
 ## Why
 

@@ -27,3 +27,13 @@ One line of cause, one line of fix per incident. Times are approximate (from log
 | 17 | 14:10 | local | `hf auth whoami`: "Not logged in" | `HF_TOKEN` is exported in `~/.zshrc`; the tool's non-interactive shell doesn't source it | Run hf via `zsh -ic '...'` |
 
 "Server died" in `evalbox*.log` means the `llama-server` container exited before `/health` answered; check `docker logs` saved as `<config>/<think>/server.log` first, then whether the image exists.
+
+## 2026-09-25 (GCP)
+
+| # | IST | Where | What happened | Cause | Fix / rule |
+|---|---|---|---|---|---|
+| 20 | 08:30 | budget | `gcloud billing budgets create --budget-amount=20USD` -> INVALID_ARGUMENT | Billing account currency is INR | Use the account currency (`1700INR`); check `gcloud billing accounts describe --format='value(currencyCode)'` |
+| 21 | 08:31 | GPU quota | L4 quota auto-denied in us-central1, Mumbai; RTX PRO 6000 denied in Delhi | New billing account; Mumbai L4 is invitation-only | Request per region: us-east4, europe-west4, europe-west1, asia-southeast1 were approved in seconds |
+| 22 | 08:34 | Cloud Build | `E2_HIGHCPU_32` refused ("quota restrictions") in the asia-southeast1 pool | New-account limit on regional pools | Global pool (no `--region`) accepted it |
+| 23 | 08:36 | Cloud Build | Image build failed in 1 min: "ARG names can not be blank" | A trailing `# comment` on an `ARG` line; Dockerfile has no trailing comments | Comments on their own line only |
+

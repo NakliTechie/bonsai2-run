@@ -1,45 +1,110 @@
-# bonsai2-run
+<h1 align="center">bonsai2-run</h1>
 
-> One-command, scale-to-zero Google Cloud Run deploy of Ternary-Bonsai-2-27B with our re-fitted DFlash 2 drafter. $0 at rest.
+<p align="center">
+  <strong>Ternary Bonsai 2 27B with DFlash2 speculative decoding on one Google Cloud Run L4 —<br>
+  an OpenAI-compatible endpoint that costs nothing while it sits idle.</strong>
+</p>
 
-Tier: **Tool**. Serve PrismML's Ternary-Bonsai-2-27B (1.72 bpw, ~6 GB GGUF) plus the NakliTechie re-fitted DFlash 2 drafter as an OpenAI-compatible endpoint on Cloud Run, with `--min-instances=0` so an idle deployment costs nothing. The recipe follows [taeold/djev-run](https://github.com/taeold/djev-run), which serves DiffusionGemma-Jev the same way and cut its cold start from 4 m 05 s to 47.5 s.
+<p align="center">
+  One script. Your Google Cloud project. Weights live in your own bucket; nothing but your project sits in the serving path.
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-3fb950?style=flat-square"></a>
+  <img alt="idle cost $0" src="https://img.shields.io/badge/idle%20cost-%240-3fb950?style=flat-square">
+  <img alt="one L4" src="https://img.shields.io/badge/GPU-one%20L4-3fb950?style=flat-square">
+  <a href="results/bench-2026-09-24/RESULTS.md"><img alt="2.2x on math and code" src="https://img.shields.io/badge/math%20%26%20code-2.2x-3fb950?style=flat-square"></a>
+</p>
+
+![Decode tok/s on one L4: plain vs prompt lookup vs DFlash2 on GSM8K, MBPP, MATH-500, MT-Bench](results/bench-2026-09-24/charts/1-speedup.png)
 
 ## Install
 
-<!-- Install comes before Why (README-DOCTRINE). Fill the moment there is a run path. -->
-_TODO: two commands, as in djev-run — (1) stage the GGUFs in a GCS bucket, (2) `gcloud beta run deploy … --image=ghcr.io/naklitechie/bonsai2-run:latest --gpu-type=nvidia-l4 --min-instances=0`._
+| | |
+|---|---|
+| **Cloud Shell** (nothing to install) | Open [shell.cloud.google.com](https://shell.cloud.google.com), then `curl -fsSL https://raw.githubusercontent.com/NakliTechie/bonsai2-run/main/cloudrun/bonsai2-cloudrun.sh \| bash` |
+| **Any machine with `gcloud`** | Same one-liner, after `gcloud auth login` and `gcloud config set project <id>` |
+| **From this repo** (build your own image) | `./deploy.sh build && STAGE_VIA=cloudbuild BUCKET=<b> ./deploy.sh stage && BUCKET=<b> ./deploy.sh deploy` |
+
+The script links your billing account, turns on the APIs, requests one Cloud Run L4 in the first region
+that grants it, copies the two GGUFs from Hugging Face into your bucket inside Google Cloud, and deploys
+[`ghcr.io/naklitechie/bonsai2-run`](https://github.com/NakliTechie/bonsai2-run/pkgs/container/bonsai2-run). About
+seven minutes; it prints the URL and this call:
+
+```bash
+curl -s $URL/v1/chat/completions -H "Authorization: Bearer $(gcloud auth print-identity-token)" \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"Write a palindrome check in Python."}],"temperature":0}'
+```
+
+Needs a Google Cloud account with billing. A Free Trial account must be **upgraded to paid** first; Google
+keeps the unused credit, but GPUs and quota requests are blocked during the trial. `PROFILE=chat` picks the
+chat setting; `DOWN=1` deletes the service and bucket.
 
 ## Why
 
-- **Zero at rest.** Cloud Run bills a GPU instance only while it is up; `--min-instances=0` scales to $0 when idle. Bursty, low-duty-cycle use pays per active hour.
-- **The model is small.** The PTQ1_0 GGUF is 5.95 GB and the drafter Q4_K_M is a few GB, so the whole stack fits one **NVIDIA L4 (24 GB)**, the cheapest Cloud Run GPU. djev-run needs an RTX PRO 6000 for 17.5 GB of weights.
-- **Less to stream, faster cold start.** Under half of djev's bytes to pull from GCS.
+You want a real 27B model behind an API for a demo, an agent or a weekend project, and you do not want to pay
+for a GPU that sits idle. A rented box bills around the clock; a hosted API is someone else's model and logs.
 
-## Serving path
+bonsai2-run is one script around PrismML's llama.cpp. Cloud Run starts the L4 on the first request and removes
+it when idle, so the bill is per active hour. The model is PrismML's 2-bit
+[Ternary Bonsai 2 27B](https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf) (7.2 GB), so it fits the
+cheapest Cloud Run GPU, with a re-fitted
+[DFlash2 drafter](https://huggingface.co/naklitechie/Qwen3.8-27B-DFlash2-ternary-bonsai2) and prompt lookup on top.
 
-CUDA, not MLX. The Apple-Silicon fork ([dflash-mlx-bonsai2](https://github.com/NakliTechie/dflash-mlx-bonsai2)) cannot run on Cloud Run's NVIDIA GPUs.
+**Use [djev-run](https://github.com/taeold/djev-run)** for DiffusionGemma-Jev typed decisions on an RTX PRO 6000:
+the recipe this repo copies. **Use [dflash-mlx-bonsai2](https://github.com/NakliTechie/dflash-mlx-bonsai2)** or
+**[LocalMind](https://localmind.naklitechie.com)** to run the same model and drafter on a Mac or in the browser, for free.
+**Use plain llama.cpp** on your own 24 GB GPU if it is already on all day. **Use a hosted API** if you need
+many concurrent users; this is one GPU, one request at a time.
 
-- Engine: PrismML's llama.cpp fork with DFlash 2 speculative decoding — our `~/Code/llama.cpp-prism` carries the DFlash2 spec (`8f29f159c`) and the `prism.hadamard` transform fix for the borrowed tok_embd / lm_head (`cbe495c59`). Stock llama.cpp cannot run the Bonsai GGUF.
-- Target: [prism-ml/Ternary-Bonsai-2-27B-gguf](https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf) (PTQ1_0 5.95 GB, or PQ2_0 7.21 GB).
-- Drafter: [naklitechie/Qwen3.8-27B-DFlash2-ternary-bonsai2](https://huggingface.co/naklitechie/Qwen3.8-27B-DFlash2-ternary-bonsai2) `Qwen3.8-27B-DFlash2-r3-Q4_K_M.gguf`.
-- API: `llama-server` OpenAI-compatible `/v1/chat/completions`; speculation engages on greedy (`temperature: 0`) requests.
-- GPU: Cloud Run `nvidia-l4`; `nvidia-rtx-pro-6000` as fallback.
+## What it costs
 
-## Cold-start recipe (ported from djev-run)
+About **$1.42 per active hour** in a Tier-1 region (L4 + 8 vCPU + 32 GiB, instance billing, list price),
+**$0 idle**, plus cents a month for 8.3 GB in Cloud Storage. The first request after an idle spell waits
+for a GPU instance: in-container startup is 18 s (12 s to stream the weights into memory, 6 s to load),
+plus Cloud Run's scheduling and image pull.
 
-- Weights in GCS, mounted by Cloud Storage FUSE with `enable-buffered-read=true`; VPC egress `all-traffic` (djev measured ~1.05 GiB/s).
-- Background copy of the GGUFs into `/dev/shm` while the server binary starts.
-- No CUDA-graph / warm-up passes that cost startup time.
-- `--no-cpu-throttling`; no `--cpu-boost` (djev measured it slower).
-- Startup probe on `/health`.
+## How fast
 
-## Next steps
+Decode speedup on one L4, greedy, batch 1, vs the fastest plain setup; both rows measured on the same machine in one session:
 
-- Build llama.cpp-prism for CUDA (sm_89 for L4, sm_120 for RTX PRO 6000) in a container; confirm DFlash2 + Bonsai GGUF runs on a CUDA box.
-- Entrypoint script: shm staging + `llama-server` with target + drafter.
-- `deploy.sh`: bucket upload + `gcloud beta run deploy`.
-- Measure: cold start from zero, tok/s plain vs DFlash2, $/active-hour on L4.
+| | GSM8K | MBPP | MATH-500 | MT-Bench | code edit |
+|---|---|---|---|---|---|
+| DFlash2 | 2.17x | 2.17x | 2.20x | 1.39x | 2.46x |
+| + prompt lookup (default) | 2.14x | 2.07x | 2.19x | 1.39x | **3.15x** |
 
-## Context
+Accuracy stays within one or two problems per set. On a live Cloud Run instance a "keep this function, add
+type hints" edit ran at 148 tok/s. Open-ended writing gains least; `PROFILE=chat` (draft length 3) gets it to
+1.26x. Every number, method and raw row: [results/](results/) and the
+[Hugging Face dataset](https://huggingface.co/datasets/naklitechie/bonsai2-dflash2-bench).
 
-Prior art in the knowledge vault: `sources/2026-09-20-taeold-djev-run-repo.md` (the recipe), `sources/2026-09-17-ternary-bonsai-2-27b-model-card.md` (GGUF sizes, RTX 5090 129.9 tok/s tg128), `sources/2026-09-19-bonsai-2-27b-cmp170hx-dflash2.md` (vLLM W4A16 + DFlash2 on SM80: 155.7–251.6 tok/s, 4.17 tok/draft — an alternative serving path).
+## Commands
+
+```bash
+./deploy.sh status                    # one JSON line: URL, revision, GPU, weights in the bucket
+./deploy.sh build                     # build the image on Cloud Build into your Artifact Registry
+STAGE_VIA=cloudbuild ./deploy.sh stage  # copy the GGUFs from Hugging Face into gs://$BUCKET
+./deploy.sh deploy                    # Cloud Run: L4, min 0 / max 1, GCS FUSE, /health probe
+./deploy.sh bench                     # cold-start + three greedy prompts, tok/s and draft acceptance
+./deploy.sh down                      # delete the service (the bucket stays)
+```
+
+Every command ends with `verdict=<CODE> next=<command>` and a matching exit code (`SPEC.md` §0), so an
+agent can drive it without reading prose.
+
+## Verify it yourself
+
+```bash
+python3 scripts/bench.py run $URL out.jsonl --token "$(gcloud auth print-identity-token)"
+python3 scripts/score.py sets/ results/bench-2026-09-24 [--extended]
+```
+
+`score.py` executes generated code in `docker run --network none` and reports pass@1 next to tok/s, so a
+speedup that costs accuracy shows up in the same table. The benchmark ran on AWS L4s (two machines, identical
+drafts accepted); the deploy path above ran end to end on Cloud Run in asia-southeast1 on 2026-09-25.
+
+## License
+
+MIT. The image contains llama.cpp (MIT) with PrismML's changes; model weights are under their own licenses.
+[Spec](SPEC.md) · [Benchmarks](results/) · [Incidents](infra/aws/INCIDENTS.md) · [DFlash2 PR](https://github.com/PrismML-Eng/llama.cpp/pull/261)

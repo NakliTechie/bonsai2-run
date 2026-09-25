@@ -12,7 +12,7 @@ speculative decoding and prompt lookup. **$0 while idle**, about **$1.4 per acti
 curl -fsSL https://raw.githubusercontent.com/NakliTechie/bonsai2-run/main/cloudrun/bonsai2-cloudrun.sh | bash
 ```
 
-About seven minutes. It links billing, enables the APIs, requests one Cloud Run L4 in the first region that
+Seven to ten minutes on a new project (measured: 9 min 38 s). It links billing, enables the APIs, requests one Cloud Run L4 in the first region that
 grants it, copies the model files from Hugging Face into your bucket (inside Google Cloud), deploys
 `ghcr.io/naklitechie/bonsai2-run`, and prints your URL with a ready `curl`.
 

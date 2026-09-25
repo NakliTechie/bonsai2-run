@@ -28,8 +28,8 @@
 
 The script links your billing account, turns on the APIs, requests one Cloud Run L4 in the first region
 that grants it, copies the two GGUFs from Hugging Face into your bucket inside Google Cloud, and deploys
-[`ghcr.io/naklitechie/bonsai2-run`](https://github.com/NakliTechie/bonsai2-run/pkgs/container/bonsai2-run). About
-seven minutes; it prints the URL and this call:
+[`ghcr.io/naklitechie/bonsai2-run`](https://github.com/NakliTechie/bonsai2-run/pkgs/container/bonsai2-run). Seven to ten
+minutes on a new project (9 min 38 s measured on 2026-09-25); it prints the URL and this call:
 
 ```bash
 curl -s $URL/v1/chat/completions -H "Authorization: Bearer $(gcloud auth print-identity-token)" \

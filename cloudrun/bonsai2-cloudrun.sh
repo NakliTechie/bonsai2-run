@@ -48,16 +48,28 @@ gcloud components list --filter=id=beta --format='value(state.name)' 2>/dev/null
 say "Finding a region with Cloud Run L4 quota"
 granted() { gcloud beta quotas info describe "$QUOTA_ID" --service=run.googleapis.com --project="$PROJECT" --format=json 2>/dev/null |
   python3 -c "import json,sys; d=json.load(sys.stdin); print(max([int(x['details'].get('value',0)) for x in d.get('dimensionsInfos',[]) if x.get('dimensions',{}).get('region')=='$1'] or [0]))"; }
+request() {  # file a 1-GPU request for region $1; retries while a new project's IAM is still propagating
+  local out
+  for _ in 1 2 3 4 5 6 7 8 9; do
+    out=$(gcloud beta quotas preferences create --service=run.googleapis.com --project="$PROJECT" --quota-id="$QUOTA_ID" \
+      --preferred-value=1 --dimensions=region="$1" --preference-id="l4-$1" --email="$(gcloud config get-value account 2>/dev/null)" \
+      --justification="Scale-to-zero Cloud Run service with one L4 GPU for an open-weight LLM (min 0, max 1)." 2>&1) && return 0
+    case "$out" in *"already exist"*) return 0 ;; *PERMISSION_DENIED*) sleep 10 ;; *) echo "  $1: request failed: ${out##*ERROR: }" | head -c 300; echo; return 1 ;; esac
+  done
+  echo "  $1: still PERMISSION_DENIED after 90 s (new project IAM)"; return 1
+}
+state() { gcloud beta quotas preferences describe "l4-$1" --project="$PROJECT" --format='value(quotaConfig.stateDetail)' 2>/dev/null; }
 if [ -z "${REGION:-}" ]; then
   for r in $REGIONS; do
     q=$(granted "$r" || echo 0)
-    if [ "${q:-0}" -lt 1 ]; then
-      gcloud beta quotas preferences create --service=run.googleapis.com --project="$PROJECT" --quota-id="$QUOTA_ID" --preferred-value=1 \
-        --dimensions=region="$r" --preference-id="l4-$r" --email="$(gcloud config get-value account 2>/dev/null)" \
-        --justification="Scale-to-zero Cloud Run service with one L4 GPU for an open-weight LLM (min 0, max 1)." >/dev/null 2>&1 || true
-      for _ in 1 2 3 4 5 6; do sleep 10; q=$(granted "$r" || echo 0); [ "${q:-0}" -ge 1 ] && break; done
+    if [ "${q:-0}" -lt 1 ] && request "$r"; then
+      for _ in $(seq 1 12); do   # decisions usually arrive in seconds
+        q=$(granted "$r" || echo 0); [ "${q:-0}" -ge 1 ] && break
+        case "$(state "$r")" in *denied*|*Denied*) break ;; esac
+        sleep 5
+      done
     fi
-    echo "  $r: L4 quota ${q:-0}"
+    echo "  $r: L4 quota ${q:-0}${q:+ }$( [ "${q:-0}" -lt 1 ] && state "$r" )"
     if [ "${q:-0}" -ge 1 ]; then REGION=$r; break; fi
   done
 fi

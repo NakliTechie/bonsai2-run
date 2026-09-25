@@ -13,7 +13,7 @@ fast: is the endpoint up and what does it cost, what is missing, what is the nex
    to decide the next move.
 2. **Closed verdict vocabulary.** Every `deploy.sh` verb ends with exactly one line `verdict=<CODE> next=<command>`
    and a matching exit code. Codes: `OK` 0 · `NO_GCLOUD` 10 · `NO_PROJECT` 11 · `NO_BUCKET` 12 · `WEIGHTS_MISSING` 13 ·
-   `DEPLOY_FAILED` 14 · `UNHEALTHY` 15 · `NOT_DEPLOYED` 16. One code per distinct next action.
+   `DEPLOY_FAILED` 14 · `UNHEALTHY` 15 · `NOT_DEPLOYED` 16 · `BUILD_FAILED` 17. One code per distinct next action.
 3. **Bounded output.** One line per step, plus the verdict line. Output grows with the number of steps, never with
    log size. Failures print the last 20 lines of the relevant log, no more.
 4. **Every failure names its remedy.** `next=` is a literal command (for example `./deploy.sh stage`).

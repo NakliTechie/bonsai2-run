@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # bonsai2-run: scale-to-zero Cloud Run GPU deploy of Ternary-Bonsai-2-27B + DFlash2 drafter.
-#   ./deploy.sh status | stage | deploy | bench | sweep | down
+#   ./deploy.sh status | build | stage | deploy | bench | sweep | down
+# First deploy: ./deploy.sh build && STAGE_VIA=cloudbuild BUCKET=<name> ./deploy.sh stage && BUCKET=<name> ./deploy.sh deploy
 # Every verb ends with one `verdict=<CODE> next=<command>` line and the matching exit code (SPEC.md §0).
 set -uo pipefail
 cd "$(dirname "$0")" || exit 2
@@ -50,6 +51,18 @@ print(json.dumps(out))
 PY
   [ -n "$svc" ] || verdict NOT_DEPLOYED "./deploy.sh deploy" 16
   verdict OK "./deploy.sh bench" 0
+}
+
+cmd_build() {  # image on Cloud Build (global pool: new accounts can't use E2_HIGHCPU_32 in regional pools)
+  preflight
+  gcloud artifacts repositories describe bonsai2 --location="$REGION" >/dev/null 2>&1 || {
+    step "create Artifact Registry repo bonsai2 in $REGION"
+    gcloud artifacts repositories create bonsai2 --repository-format=docker --location="$REGION" >/dev/null || verdict BUILD_FAILED "check Artifact Registry API/permissions" 17
+  }
+  step "build $IMAGE (Cloud Build, ~16 min)"
+  gcloud builds submit --config infra/gcp/cloudbuild-image.yaml --substitutions "_IMAGE=$IMAGE" . 2>&1 | tail -3
+  [ "${PIPESTATUS[0]}" = 0 ] || verdict BUILD_FAILED "gcloud builds list --limit 3" 17
+  verdict OK "STAGE_VIA=cloudbuild BUCKET=<name> ./deploy.sh stage" 0
 }
 
 cmd_stage() {
@@ -126,6 +139,6 @@ cmd_down() {
 }
 
 case "${1:-status}" in
-  status|stage|deploy|bench|sweep|down) "cmd_$1" ;;
-  *) echo "usage: ./deploy.sh status|stage|deploy|bench|sweep|down"; exit 2 ;;
+  status|build|stage|deploy|bench|sweep|down) "cmd_$1" ;;
+  *) echo "usage: ./deploy.sh status|build|stage|deploy|bench|sweep|down"; exit 2 ;;
 esac

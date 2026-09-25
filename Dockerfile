@@ -7,7 +7,8 @@ FROM docker.io/nvidia/cuda:${CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION} AS buil
 # PrismML-Eng/llama.cpp prism head 2026-09-24 (has the Hadamard borrow fix, PrismML #210); patches/ adds DFlash2 (ggml-org #27816).
 ARG PRISM_SHA=ee8ad0ef6b03b34b8709ea9440a4b3927e8a6524
 ARG CUDA_ARCHS="89;120"
-ARG JOBS=""   # compile parallelism; empty = nproc (bound it on big builders: unbounded nvcc OOMs, INCIDENTS #10)
+# compile parallelism; empty = nproc (bound it on big builders: unbounded nvcc OOMs, infra/aws/INCIDENTS.md #10)
+ARG JOBS=
 # retried: Ubuntu mirrors 404 mid-sync now and then (seen 2026-09-24 on libexpat1)
 RUN ok=; for i in 1 2 3; do apt-get update && apt-get install -y --no-install-recommends --fix-missing git cmake build-essential ca-certificates && ok=1 && break; sleep 20; done; [ -n "$ok" ] \
     && rm -rf /var/lib/apt/lists/*

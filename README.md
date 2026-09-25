@@ -20,38 +20,42 @@
 
 ## Install
 
-| | |
-|---|---|
-| **Cloud Shell** (nothing to install) | Open [shell.cloud.google.com](https://shell.cloud.google.com), then `curl -fsSL https://raw.githubusercontent.com/NakliTechie/bonsai2-run/main/cloudrun/bonsai2-cloudrun.sh \| bash` |
-| **Any machine with `gcloud`** | Same one-liner, after `gcloud auth login` and `gcloud config set project <id>` |
-| **From this repo** (build your own image) | `./deploy.sh build && STAGE_VIA=cloudbuild BUCKET=<b> ./deploy.sh stage && BUCKET=<b> ./deploy.sh deploy` |
+**Step 1. Get a Google Cloud account with billing** at [cloud.google.com](https://cloud.google.com). A Free Trial
+account must be **upgraded to paid** first: Google keeps the unused credit, but GPUs are blocked during the trial.
 
-The script links your billing account, turns on the APIs, requests one Cloud Run L4 in the first region
-that grants it, copies the two GGUFs from Hugging Face into your bucket inside Google Cloud, and deploys
-[`ghcr.io/naklitechie/bonsai2-run`](https://github.com/NakliTechie/bonsai2-run/pkgs/container/bonsai2-run). Seven to ten
-minutes on a new project (9 min 38 s measured on 2026-09-25); it prints the URL and this call:
+**Step 2. Open [Cloud Shell](https://shell.cloud.google.com)** and select or create a project. It is already signed in.
+
+**Step 3. Paste this line.** Wait seven to ten minutes (9 min 38 s measured on a new project).
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NakliTechie/bonsai2-run/main/cloudrun/bonsai2-cloudrun.sh | bash
+```
+
+It links billing, turns on the APIs, requests one L4 GPU in the first region that grants it, copies the model
+into a bucket in your project and deploys [`ghcr.io/naklitechie/bonsai2-run`](https://github.com/NakliTechie/bonsai2-run/pkgs/container/bonsai2-run).
+
+**Step 4. Copy the URL line it prints** and paste it back into the shell:
+
+```text
+== Your endpoint is live
+  export URL=https://bonsai2-xxxxxxxxxx-as.a.run.app
+```
+
+**Step 5. Call it.** The endpoint is private to your Google account, so every call carries an identity token.
 
 ```bash
 curl -s $URL/v1/chat/completions -H "Authorization: Bearer $(gcloud auth print-identity-token)" \
-  -H "Content-Type: application/json" \
-  -d '{"messages":[{"role":"user","content":"Write a palindrome check in Python."}],"temperature":0}'
+  -H "Content-Type: application/json" -d '{"messages":[{"role":"user","content":"Write a palindrome check in Python."}]}'
 ```
-
-Needs a Google Cloud account with billing. A Free Trial account must be **upgraded to paid** first; Google
-keeps the unused credit, but GPUs and quota requests are blocked during the trial. `PROFILE=chat` picks the
-chat setting; `DOWN=1` deletes the service and bucket. The same server also speaks Anthropic's Messages API at
-`/v1/messages`. The model thinks before answering by default; send `"chat_template_kwargs": {"enable_thinking": false}` for speed.
 
 ## Why
 
 You want a real 27B model behind an API for a demo, an agent or a weekend project, and you do not want to pay
 for a GPU that sits idle. A rented box bills around the clock; a hosted API is someone else's model and logs.
 
-bonsai2-run is one script around PrismML's llama.cpp. Cloud Run starts the L4 on the first request and removes
-it when idle, so the bill is per active hour. The model is PrismML's 2-bit
-[Ternary Bonsai 2 27B](https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf) (7.2 GB), so it fits the
-cheapest Cloud Run GPU, with a re-fitted
-[DFlash2 drafter](https://huggingface.co/naklitechie/Qwen3.8-27B-DFlash2-ternary-bonsai2) and prompt lookup on top.
+bonsai2-run is one script around PrismML's llama.cpp. Cloud Run starts the L4 on the first request and removes it
+when idle, so the bill is per active hour. PrismML's 2-bit [Ternary Bonsai 2 27B](https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf) (7.2 GB) fits the cheapest
+Cloud Run GPU; a re-fitted [DFlash2 drafter](https://huggingface.co/naklitechie/Qwen3.8-27B-DFlash2-ternary-bonsai2) and prompt lookup speed it up.
 
 **Use [djev-run](https://github.com/taeold/djev-run)** for DiffusionGemma-Jev typed decisions on an RTX PRO 6000:
 the recipe this repo copies. **Use [dflash-mlx-bonsai2](https://github.com/NakliTechie/dflash-mlx-bonsai2)** or
@@ -62,9 +66,9 @@ many concurrent users; this is one GPU, one request at a time.
 ## What it costs
 
 About **$1.42 per active hour** in a Tier-1 region (L4 + 8 vCPU + 32 GiB, instance billing, list price),
-**$0 idle**, plus cents a month for 8.3 GB in Cloud Storage. The first request after an idle spell waits
-for a GPU instance: in-container startup is 18 s (12 s to stream the weights into memory, 6 s to load),
-plus Cloud Run's scheduling and image pull.
+**$0 idle**, plus cents a month for 8.3 GB in Cloud Storage. The first request after an idle spell starts
+a GPU instance: **23 s from zero to the first answer** (measured 2026-09-25: 2 s to start and mount the bucket,
+13 s to stream the weights into memory, 7 s to load, under 1 s to answer). Warm calls answer at once.
 
 ## How fast
 
@@ -80,19 +84,23 @@ type hints" edit ran at 148 tok/s. Open-ended writing gains least; `PROFILE=chat
 1.26x. Every number, method and raw row: [results/](results/) and the
 [Hugging Face dataset](https://huggingface.co/datasets/naklitechie/bonsai2-dflash2-bench).
 
-## Commands
+## Options
 
-```bash
-./deploy.sh status                    # one JSON line: URL, revision, GPU, weights in the bucket
-./deploy.sh build                     # build the image on Cloud Build into your Artifact Registry
-STAGE_VIA=cloudbuild ./deploy.sh stage  # copy the GGUFs from Hugging Face into gs://$BUCKET
-./deploy.sh deploy                    # Cloud Run: L4, min 0 / max 1, GCS FUSE, /health probe
-./deploy.sh bench                     # cold-start + three greedy prompts, tok/s and draft acceptance
-./deploy.sh down                      # delete the service (the bucket stays)
-```
+Add these once it is running. `…` stands for the Step 3 script URL.
 
-Every command ends with `verdict=<CODE> next=<command>` and a matching exit code (`SPEC.md` §0), so an
-agent can drive it without reading prose.
+| To | Do |
+|---|---|
+| Get faster answers (no thinking) | Add `"chat_template_kwargs": {"enable_thinking": false}` to the request body |
+| Use the Anthropic Messages API | POST to `$URL/v1/messages` with the same token; `max_tokens` is required |
+| Use an OpenAI or Anthropic SDK | Run `gcloud run services proxy bonsai2 --region <region> --port 8080`; base URL `http://localhost:8080/v1` (OpenAI) or `http://localhost:8080` (Anthropic), any API key |
+| Tune for chat and prose | `curl -fsSL … \| PROFILE=chat bash` (draft length 3, no prompt lookup) |
+| Choose the region | `curl -fsSL … \| REGION=europe-west4 bash` |
+| Run from your own machine | Install `gcloud`, run `gcloud auth login` and `gcloud config set project <id>`, then Step 3 |
+| Remove everything | `curl -fsSL … \| DOWN=1 bash` deletes the service and the bucket |
+| Build your own image | `./deploy.sh build`, `STAGE_VIA=cloudbuild ./deploy.sh stage`, `./deploy.sh deploy`, `./deploy.sh down` |
+
+`deploy.sh` ends every command with `verdict=<CODE> next=<command>` and a matching exit code (`SPEC.md` §0), so
+an agent can drive it without reading prose.
 
 ## Verify it yourself
 

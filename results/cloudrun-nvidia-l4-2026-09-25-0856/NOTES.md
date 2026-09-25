@@ -12,3 +12,10 @@ min 0 / max 1, GCS FUSE (enable-buffered-read) + Direct VPC egress, `NGRAM=1` de
   319 drafted / 286 accepted in ~11 verify steps = 29 drafted and 27 tokens per step (DFlash2 alone caps at 7),
   so ngram-mod is active.
 - Cold start from zero: see `cold.txt` of the next bench run.
+
+## Cold start from zero (2026-09-25 10:38 IST)
+
+Service idle for 25 min (no instance). One request (`max_tokens` 8, thinking off), timed with curl from Bengaluru:
+`http=200 ttfb=23.32 s`. Cloud Run log: instance start 05:08:52.6Z, FUSE mount +1.3 s, staging 7.8 GB in 12.7 s,
+`llama-server` listening +7.0 s, `/health` probe passed 05:09:14.9Z (22.3 s), answer 0.7 s. Warm repeat: 0.66 s.
+Proxy check: `gcloud run services proxy` + OpenAI Python SDK (`/v1`) and Anthropic Python SDK (base URL, any key) both answered.

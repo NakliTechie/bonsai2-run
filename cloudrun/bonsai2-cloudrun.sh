@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Ternary Bonsai 2 27B + DFlash2 on Google Cloud Run: one NVIDIA L4, OpenAI-compatible API, $0 when idle.
+# Ternary Bonsai 2 27B + DFlash2 on Google Cloud Run: one NVIDIA L4, OpenAI- and Anthropic-compatible API, $0 when idle.
 # Run it in Cloud Shell (already signed in) or anywhere with gcloud:
-#   curl -fsSL https://gist.githubusercontent.com/NakliTechie/<gist-id>/raw/bonsai2-cloudrun.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/NakliTechie/bonsai2-run/main/cloudrun/bonsai2-cloudrun.sh | bash
 # Knobs (env): PROJECT (default: current gcloud project), REGION (default: first region with L4 quota),
 #   SERVICE=bonsai2, BUCKET=<project>-bonsai2, IMAGE=ghcr.io/naklitechie/bonsai2-run:latest,
 #   PROFILE=code|chat (code: draft 7 + prompt lookup; chat: draft 3), DOWN=1 (delete the service and bucket).
@@ -114,16 +114,18 @@ gcloud beta run deploy "$SERVICE" --region "$REGION" --image "$IMAGE" \
   --no-allow-unauthenticated --quiet >/dev/null
 
 URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.url)')
-say "Done: $URL"
+say "Your endpoint is live"
 cat <<EOF
-Private by default (Google identity token). Try it:
+Step 4. Save your URL (paste this line):
 
-  curl -s $URL/v1/chat/completions \\
+  export URL=$URL
+
+Step 5. Call it:
+
+  curl -s \$URL/v1/chat/completions \\
     -H "Authorization: Bearer \$(gcloud auth print-identity-token)" -H "Content-Type: application/json" \\
-    -d '{"messages":[{"role":"user","content":"Write a Python function that checks if a string is a palindrome."}],"temperature":0,"max_tokens":256}'
+    -d '{"messages":[{"role":"user","content":"Write a Python function that checks if a string is a palindrome."}],"max_tokens":1024}'
 
-The first request after an idle spell starts a GPU instance (about a minute); it scales back to zero when idle.
-Cost while an instance is up: about \$1.4/hour (L4 + 8 vCPU + 32 GiB, Tier-1 list price). Idle: \$0 plus cents/month for the bucket.
-Local OpenAI-style endpoint without tokens:  gcloud run services proxy $SERVICE --region $REGION --port 8080
-Remove everything:  DOWN=1 PROJECT=$PROJECT bash bonsai2-cloudrun.sh
+The first call after an idle spell starts a GPU instance (about 25 s). Idle: \$0. Active: about \$1.4/hour.
+Options (thinking off, Anthropic API, SDKs, remove everything): https://github.com/NakliTechie/bonsai2-run#options
 EOF

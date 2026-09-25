@@ -5,31 +5,44 @@ speculative decoding and prompt lookup. **$0 while idle**, about **$1.4 per acti
 
 ## Run it
 
-1. Open **[Cloud Shell](https://shell.cloud.google.com)** (already signed in) and pick or create a project.
-2. Paste:
+**Step 1. Get a Google Cloud account with billing** at [cloud.google.com](https://cloud.google.com). A Free Trial
+account must be **upgraded to paid** first: Google keeps the unused credit, but GPUs are blocked during the trial.
+
+**Step 2. Open [Cloud Shell](https://shell.cloud.google.com)** and select or create a project. It is already signed in.
+
+**Step 3. Paste this line.** Wait seven to ten minutes (9 min 38 s measured on a new project).
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/NakliTechie/bonsai2-run/main/cloudrun/bonsai2-cloudrun.sh | bash
 ```
 
-Seven to ten minutes on a new project (measured: 9 min 38 s). It links billing, enables the APIs, requests one Cloud Run L4 in the first region that
-grants it, copies the model files from Hugging Face into your bucket (inside Google Cloud), deploys
-`ghcr.io/naklitechie/bonsai2-run`, and prints your URL with a ready `curl`.
+**Step 4. Copy the URL line it prints** and paste it back into the shell:
 
-**Needs:** a billing account. A Free Trial must be **upgraded to paid** first (Google keeps the unused credit;
-GPUs and quota requests are blocked during the trial).
+```text
+== Your endpoint is live
+  export URL=https://bonsai2-xxxxxxxxxx-as.a.run.app
+```
 
-**Options:** `PROFILE=chat` (tuned for prose), `REGION=europe-west4` (skip the search), `DOWN=1` (delete the
-service and bucket). Put them before `bash`: `curl -fsSL … | PROFILE=chat bash`.
+**Step 5. Call it.** The endpoint is private to your Google account, so every call carries an identity token.
 
-## What you get
+```bash
+curl -s $URL/v1/chat/completions -H "Authorization: Bearer $(gcloud auth print-identity-token)" \
+  -H "Content-Type: application/json" -d '{"messages":[{"role":"user","content":"Write a palindrome check in Python."}]}'
+```
 
-- ~2.2x decode on math and code vs plain decoding on the same L4; 148 tok/s on a copy-heavy code edit.
-- OpenAI-compatible `/v1/chat/completions` and Anthropic-compatible `/v1/messages`. The model thinks by default;
-  send `"chat_template_kwargs": {"enable_thinking": false}` to skip it.
-- Private by default: calls need `Authorization: Bearer $(gcloud auth print-identity-token)`, or run
-  `gcloud run services proxy bonsai2 --region <region> --port 8080` for a local, token-free endpoint.
-- The first request after an idle spell waits for a GPU instance to start (tens of seconds).
+## Options
+
+| To | Do |
+|---|---|
+| Get faster answers (no thinking) | Add `"chat_template_kwargs": {"enable_thinking": false}` to the request body |
+| Use the Anthropic Messages API | POST to `$URL/v1/messages` with the same token; `max_tokens` is required |
+| Use an OpenAI or Anthropic SDK | Run `gcloud run services proxy bonsai2 --region <region> --port 8080`; base URL `http://localhost:8080/v1` (OpenAI) or `http://localhost:8080` (Anthropic), any API key |
+| Tune for chat and prose | `curl -fsSL … \| PROFILE=chat bash` |
+| Choose the region | `curl -fsSL … \| REGION=europe-west4 bash` |
+| Remove everything | `curl -fsSL … \| DOWN=1 bash` deletes the service and the bucket |
+
+The first call after an idle spell starts a GPU instance: 23 s from zero to the first answer (measured). On math and code it decodes about 2.2x faster
+than plain decoding on the same L4; a copy-heavy code edit ran at 148 tok/s.
 
 Full source, benchmarks and method: **[NakliTechie/bonsai2-run](https://github.com/NakliTechie/bonsai2-run)**.
 Model: [prism-ml/Ternary-Bonsai-2-27B](https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf) ·

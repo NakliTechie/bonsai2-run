@@ -52,8 +52,8 @@ To use it again, repeat Step 3. To remove every trace, shut down the project (Cl
 | Tune for chat and prose | `curl -fsSL … \| PROFILE=chat bash` |
 | Choose the region | `curl -fsSL … \| REGION=europe-west4 bash` |
 
-The first call after an idle spell starts a GPU instance: 23 s from zero to the first answer (measured). On math and code it decodes about 2.2x faster
-than plain decoding on the same L4; a copy-heavy code edit ran at 148 tok/s.
+The first call after an idle spell starts a GPU instance: 23 s from zero to the first answer (measured). On math and code it decodes about 2.1x faster
+than plain decoding on the same L4, and 3.2x on code edits; a live code edit ran at 148 tok/s.
 
 Full source, benchmarks and method: **[NakliTechie/bonsai2-run](https://github.com/NakliTechie/bonsai2-run)**.
 Model: [prism-ml/Ternary-Bonsai-2-27B](https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf) ·

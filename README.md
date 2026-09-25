@@ -9,10 +9,10 @@
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-3fb950?style=flat-square"></a>
   <img alt="idle GPU cost $0" src="https://img.shields.io/badge/idle%20GPU%20cost-%240-3fb950?style=flat-square">
   <img alt="one L4" src="https://img.shields.io/badge/GPU-one%20L4-3fb950?style=flat-square">
-  <a href="results/bench-2026-09-24/RESULTS.md"><img alt="2.2x on math and code" src="https://img.shields.io/badge/math%20%26%20code-2.2x-3fb950?style=flat-square"></a>
+  <a href="results/bench-stack-2026-09-24/RESULTS.md"><img alt="2.1x on math and code, 3.2x on code edits" src="https://img.shields.io/badge/math%20%26%20code-2.1x%20%C2%B7%20code%20edits%203.2x-3fb950?style=flat-square"></a>
 </p>
 
-![Decode tok/s on one L4: plain vs prompt lookup vs DFlash2 on GSM8K, MBPP, MATH-500, MT-Bench](results/bench-2026-09-24/charts/1-speedup.png)
+![Speedup over plain decoding on one L4: DFlash2 alone vs the default, prompt lookup + DFlash2, per benchmark](results/bench-stack-2026-09-24/charts/stacking.png)
 
 ## Install
 
@@ -77,7 +77,7 @@ The project then costs $0; to use it again, repeat Step 3. To remove every trace
 
 You want a real 27B model behind an API for a demo, an agent or a weekend project, without paying for a GPU that
 sits idle. PrismML's 2-bit [Ternary Bonsai 2 27B](https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf) (7.2 GB) fits the cheapest Cloud Run GPU; a re-fitted
-[DFlash2 drafter](https://huggingface.co/naklitechie/Qwen3.8-27B-DFlash2-ternary-bonsai2) and prompt lookup make it about 2.2x faster on math and code.
+[DFlash2 drafter](https://huggingface.co/naklitechie/Qwen3.8-27B-DFlash2-ternary-bonsai2) and prompt lookup make it about 2.1x faster on math and code, 3.2x on code edits.
 
 **Use [djev-run](https://github.com/taeold/djev-run)** for DiffusionGemma-Jev on an RTX PRO 6000: the recipe this repo
 copies. **Use [dflash-mlx-bonsai2](https://github.com/NakliTechie/dflash-mlx-bonsai2)** or **[LocalMind](https://localmind.naklitechie.com)** for the same model on a Mac or in the

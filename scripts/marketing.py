@@ -82,7 +82,7 @@ for i, (n, head, body) in enumerate(steps):
         ax.annotate("", xy=(x + 369, 495), xytext=(x + 341, 495), arrowprops=dict(arrowstyle="-|>,head_width=0.5,head_length=0.8", color=BLUE, lw=3))
 PAIRS.append((ax.text(80 + 2 * 370 + 28, 352, "measured: 9 min 38 s\nfrom an empty project", fontsize=14.5, color=BLUE,
                       va="bottom", fontweight="bold", linespacing=1.4), (80 + 2 * 370, 330, 80 + 2 * 370 + 340, 660), "step 3 note"))
-for i, (big, small) in enumerate(STATS[1:] + [("~2.2x", "on math & code vs plain")]):
+for i, (big, small) in enumerate(STATS[1:] + [("3.2x", "code edits · 2.1x math & code")]):
     tile(ax, 80 + i * 370, 100, 340, 170, big, small, 34, 16)
 ax.text(80, 50, "About $1.42 per active hour · model files about 17¢ a month · github.com/NakliTechie/bonsai2-run",
         fontsize=15, color=MUTED, va="center")

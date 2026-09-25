@@ -2,16 +2,12 @@
 
 <p align="center">
   <strong>Ternary Bonsai 2 27B with DFlash2 speculative decoding on one Google Cloud Run L4 —<br>
-  an OpenAI- and Anthropic-compatible endpoint that costs nothing while it sits idle.</strong>
-</p>
-
-<p align="center">
-  One script. Your Google Cloud project. Weights live in your own bucket; nothing but your project sits in the serving path.
+  an OpenAI- and Anthropic-compatible endpoint with no GPU bill while it sits idle.</strong>
 </p>
 
 <p align="center">
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-3fb950?style=flat-square"></a>
-  <img alt="idle cost $0" src="https://img.shields.io/badge/idle%20cost-%240-3fb950?style=flat-square">
+  <img alt="idle GPU cost $0" src="https://img.shields.io/badge/idle%20GPU%20cost-%240-3fb950?style=flat-square">
   <img alt="one L4" src="https://img.shields.io/badge/GPU-one%20L4-3fb950?style=flat-square">
   <a href="results/bench-2026-09-24/RESULTS.md"><img alt="2.2x on math and code" src="https://img.shields.io/badge/math%20%26%20code-2.2x-3fb950?style=flat-square"></a>
 </p>
@@ -31,8 +27,7 @@ account must be **upgraded to paid** first: Google keeps the unused credit, but 
 curl -fsSL https://raw.githubusercontent.com/NakliTechie/bonsai2-run/main/cloudrun/bonsai2-cloudrun.sh | bash
 ```
 
-It links billing, turns on the APIs, requests one L4 GPU in the first region that grants it, copies the model
-into a bucket in your project and deploys [`ghcr.io/naklitechie/bonsai2-run`](https://github.com/NakliTechie/bonsai2-run/pkgs/container/bonsai2-run).
+It links billing, turns on the APIs, gets one L4 GPU, copies the model into your own bucket and deploys.
 
 **Step 4. Copy the URL line it prints** and paste it back into the shell:
 
@@ -41,77 +36,80 @@ into a bucket in your project and deploys [`ghcr.io/naklitechie/bonsai2-run`](ht
   export URL=https://bonsai2-xxxxxxxxxx-as.a.run.app
 ```
 
-**Step 5. Call it.** The endpoint is private to your Google account, so every call carries an identity token.
+**Step 5. Call it.** The endpoint is private to your Google account. The first call after an idle spell takes
+**23 s** (measured) while a GPU starts; later calls answer at once.
 
 ```bash
 curl -s $URL/v1/chat/completions -H "Authorization: Bearer $(gcloud auth print-identity-token)" \
   -H "Content-Type: application/json" -d '{"messages":[{"role":"user","content":"Write a palindrome check in Python."}]}'
 ```
 
-## Why
+## What it costs, and how to stop paying
 
-You want a real 27B model behind an API for a demo, an agent or a weekend project, and you do not want to pay
-for a GPU that sits idle. A rented box bills around the clock; a hosted API is someone else's model and logs.
+| While | You pay |
+|---|---|
+| Someone is calling it | About **$1.42 per hour** the GPU is up (L4 + 8 vCPU + 32 GiB, list price) |
+| Nobody is calling it | **$0 for the GPU**, once Cloud Run removes the idle instance (up to 15 min after the last call, billed) |
+| Always, until you remove it | About **17 US cents a month** to keep the 8.3 GB model files in your bucket |
 
-bonsai2-run is one script around PrismML's llama.cpp. Cloud Run starts the L4 on the first request and removes it
-when idle, so the bill is per active hour. PrismML's 2-bit [Ternary Bonsai 2 27B](https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf) (7.2 GB) fits the cheapest
-Cloud Run GPU; a re-fitted [DFlash2 drafter](https://huggingface.co/naklitechie/Qwen3.8-27B-DFlash2-ternary-bonsai2) and prompt lookup speed it up.
+The GPU scales to zero; the bill does not, because the model files stay in your bucket for a fast restart.
 
-**Use [djev-run](https://github.com/taeold/djev-run)** for DiffusionGemma-Jev typed decisions on an RTX PRO 6000:
-the recipe this repo copies. **Use [dflash-mlx-bonsai2](https://github.com/NakliTechie/dflash-mlx-bonsai2)** or
-**[LocalMind](https://localmind.naklitechie.com)** to run the same model and drafter on a Mac or in the browser, for free.
-**Use plain llama.cpp** on your own 24 GB GPU if it is already on all day. **Use a hosted API** if you need
-many concurrent users; this is one GPU, one request at a time.
+**To stop all spending**, paste this in Cloud Shell. It deletes the service and the bucket with the model files:
 
-## What it costs
+```bash
+curl -fsSL https://raw.githubusercontent.com/NakliTechie/bonsai2-run/main/cloudrun/bonsai2-cloudrun.sh | DOWN=1 bash
+```
 
-About **$1.42 per active hour** in a Tier-1 region (L4 + 8 vCPU + 32 GiB, instance billing, list price),
-**$0 idle**, plus cents a month for 8.3 GB in Cloud Storage. The first request after an idle spell starts
-a GPU instance: **23 s from zero to the first answer** (measured 2026-09-25: 2 s to start and mount the bucket,
-13 s to stream the weights into memory, 7 s to load, under 1 s to answer). Warm calls answer at once.
-
-## How fast
-
-Decode speedup on one L4, greedy, batch 1, vs the fastest plain setup; both rows measured on the same machine in one session:
-
-| | GSM8K | MBPP | MATH-500 | MT-Bench | code edit |
-|---|---|---|---|---|---|
-| DFlash2 | 2.17x | 2.17x | 2.20x | 1.39x | 2.46x |
-| + prompt lookup (default) | 2.14x | 2.07x | 2.19x | 1.39x | **3.15x** |
-
-Accuracy stays within one or two problems per set. On a live Cloud Run instance a "keep this function, add
-type hints" edit ran at 148 tok/s. Open-ended writing gains least; `PROFILE=chat` (draft length 3) gets it to
-1.26x. Every number, method and raw row: [results/](results/) and the
-[Hugging Face dataset](https://huggingface.co/datasets/naklitechie/bonsai2-dflash2-bench).
+The project then costs $0; to use it again, repeat Step 3. To remove every trace, shut down the project
+(Cloud console → **IAM & Admin → Settings**). An alert under **Billing → Budgets & alerts** catches surprises.
 
 ## Options
 
-Add these once it is running. `…` stands for the Step 3 script URL.
-
-| To | Do |
+| To | Do (`…` is the Step 3 script URL) |
 |---|---|
 | Get faster answers (no thinking) | Add `"chat_template_kwargs": {"enable_thinking": false}` to the request body |
 | Use the Anthropic Messages API | POST to `$URL/v1/messages` with the same token; `max_tokens` is required |
 | Use an OpenAI or Anthropic SDK | Run `gcloud run services proxy bonsai2 --region <region> --port 8080`; base URL `http://localhost:8080/v1` (OpenAI) or `http://localhost:8080` (Anthropic), any API key |
 | Tune for chat and prose | `curl -fsSL … \| PROFILE=chat bash` (draft length 3, no prompt lookup) |
 | Choose the region | `curl -fsSL … \| REGION=europe-west4 bash` |
-| Run from your own machine | Install `gcloud`, run `gcloud auth login` and `gcloud config set project <id>`, then Step 3 |
-| Remove everything | `curl -fsSL … \| DOWN=1 bash` deletes the service and the bucket |
-| Build your own image | `./deploy.sh build`, `STAGE_VIA=cloudbuild ./deploy.sh stage`, `./deploy.sh deploy`, `./deploy.sh down` |
 
-`deploy.sh` ends every command with `verdict=<CODE> next=<command>` and a matching exit code (`SPEC.md` §0), so
-an agent can drive it without reading prose.
+## Why
 
-## Verify it yourself
+You want a real 27B model behind an API for a demo, an agent or a weekend project, without paying for a GPU that
+sits idle. PrismML's 2-bit [Ternary Bonsai 2 27B](https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf) (7.2 GB) fits the cheapest Cloud Run GPU; a re-fitted
+[DFlash2 drafter](https://huggingface.co/naklitechie/Qwen3.8-27B-DFlash2-ternary-bonsai2) and prompt lookup make it about 2.2x faster on math and code.
+
+**Use [djev-run](https://github.com/taeold/djev-run)** for DiffusionGemma-Jev on an RTX PRO 6000: the recipe this repo
+copies. **Use [dflash-mlx-bonsai2](https://github.com/NakliTechie/dflash-mlx-bonsai2)** or **[LocalMind](https://localmind.naklitechie.com)** for the same model on a Mac or in the
+browser, free. **Use plain llama.cpp** on your own 24 GB GPU if it is on all day. **Use a hosted API** for many
+concurrent users; this is one GPU, one request at a time.
+
+---
+
+## For developers
+
+**How fast.** Decode speedup on one L4, greedy, batch 1, vs the fastest plain setup, same machine and session:
+
+| | GSM8K | MBPP | MATH-500 | MT-Bench | code edit |
+|---|---|---|---|---|---|
+| DFlash2 | 2.17x | 2.17x | 2.20x | 1.39x | 2.46x |
+| + prompt lookup (default) | 2.14x | 2.07x | 2.19x | 1.39x | **3.15x** |
+
+Accuracy stays within one or two problems per set; a live code edit ran at 148 tok/s. Method, raw rows and
+`scripts/score.py` (pass@1 next to tok/s): [results/](results/), [HF dataset](https://huggingface.co/datasets/naklitechie/bonsai2-dflash2-bench).
+
+**From your own machine:** `gcloud auth login`, `gcloud config set project <id>`, then Step 3. **Own image:**
 
 ```bash
-python3 scripts/bench.py run $URL out.jsonl --token "$(gcloud auth print-identity-token)"
-python3 scripts/score.py sets/ results/bench-2026-09-24 [--extended]
+./deploy.sh build                        # image on Cloud Build into your Artifact Registry
+STAGE_VIA=cloudbuild ./deploy.sh stage   # GGUFs from Hugging Face into gs://$BUCKET
+./deploy.sh deploy                       # Cloud Run: L4, min 0 / max 1, GCS FUSE, /health probe
+./deploy.sh down                         # delete the service only
 ```
 
-`score.py` executes generated code in `docker run --network none` and reports pass@1 next to tok/s, so a
-speedup that costs accuracy shows up in the same table. The benchmark ran on AWS L4s (two machines, identical
-drafts accepted); the deploy path above ran end to end on Cloud Run in asia-southeast1 on 2026-09-25.
+Every command ends with `verdict=<CODE> next=<command>` and a matching exit code (`SPEC.md` §0). This path also
+stores a 2.1 GB image in Artifact Registry (~16¢/month past the 0.5 GB free tier) and a tiny `<project>_cloudbuild`
+bucket. To reach $0: `gcloud storage rm -r gs://$BUCKET gs://<project>_cloudbuild` and `gcloud artifacts repositories delete bonsai2 --location $REGION`.
 
 ## License
 

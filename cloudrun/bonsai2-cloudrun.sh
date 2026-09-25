@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ternary Bonsai 2 27B + DFlash2 on Google Cloud Run: one NVIDIA L4, OpenAI- and Anthropic-compatible API, $0 when idle.
+# Ternary Bonsai 2 27B + DFlash2 on Google Cloud Run: one NVIDIA L4, OpenAI- and Anthropic-compatible API, no GPU cost when idle (model files ~17 cents/month until DOWN=1).
 # Run it in Cloud Shell (already signed in) or anywhere with gcloud:
 #   curl -fsSL https://raw.githubusercontent.com/NakliTechie/bonsai2-run/main/cloudrun/bonsai2-cloudrun.sh | bash
 # Knobs (env): PROJECT (default: current gcloud project), REGION (default: first region with L4 quota),
@@ -126,6 +126,9 @@ Step 5. Call it:
     -H "Authorization: Bearer \$(gcloud auth print-identity-token)" -H "Content-Type: application/json" \\
     -d '{"messages":[{"role":"user","content":"Write a Python function that checks if a string is a palindrome."}],"max_tokens":1024}'
 
-The first call after an idle spell starts a GPU instance (about 25 s). Idle: \$0. Active: about \$1.4/hour.
-Options (thinking off, Anthropic API, SDKs, remove everything): https://github.com/NakliTechie/bonsai2-run#options
+The first call after an idle spell starts a GPU instance (about 25 s).
+Cost: about \$1.4/hour while the GPU is up, \$0 for the GPU when idle, about 17 cents/month for the model files.
+Stop all spending (deletes the service and the model files):
+  curl -fsSL https://raw.githubusercontent.com/NakliTechie/bonsai2-run/main/cloudrun/bonsai2-cloudrun.sh | DOWN=1 bash
+Options (thinking off, Anthropic API, SDKs): https://github.com/NakliTechie/bonsai2-run#options
 EOF

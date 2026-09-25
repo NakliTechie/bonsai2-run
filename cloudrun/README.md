@@ -1,7 +1,8 @@
 # Ternary Bonsai 2 27B + DFlash2 on Cloud Run: one script
 
 A 27B open-weight model behind OpenAI- and Anthropic-compatible APIs on one Google Cloud Run **NVIDIA L4**, with DFlash2
-speculative decoding and prompt lookup. **$0 while idle**, about **$1.4 per active hour**.
+speculative decoding and prompt lookup. About **$1.4 per active hour**, **$0 for the GPU when idle**, and about
+**17 US cents a month** to keep the model files.
 
 ## Run it
 
@@ -30,6 +31,17 @@ curl -s $URL/v1/chat/completions -H "Authorization: Bearer $(gcloud auth print-i
   -H "Content-Type: application/json" -d '{"messages":[{"role":"user","content":"Write a palindrome check in Python."}]}'
 ```
 
+## Stop paying
+
+The GPU scales to zero, but the 8.3 GB of model files stay in your bucket (about 17 US cents a month) so the
+next start is fast. To stop all spending, paste this in Cloud Shell. It deletes the service and the bucket:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NakliTechie/bonsai2-run/main/cloudrun/bonsai2-cloudrun.sh | DOWN=1 bash
+```
+
+To use it again, repeat Step 3. To remove every trace, shut down the project (Cloud console → IAM & Admin → Settings).
+
 ## Options
 
 | To | Do |
@@ -39,7 +51,6 @@ curl -s $URL/v1/chat/completions -H "Authorization: Bearer $(gcloud auth print-i
 | Use an OpenAI or Anthropic SDK | Run `gcloud run services proxy bonsai2 --region <region> --port 8080`; base URL `http://localhost:8080/v1` (OpenAI) or `http://localhost:8080` (Anthropic), any API key |
 | Tune for chat and prose | `curl -fsSL … \| PROFILE=chat bash` |
 | Choose the region | `curl -fsSL … \| REGION=europe-west4 bash` |
-| Remove everything | `curl -fsSL … \| DOWN=1 bash` deletes the service and the bucket |
 
 The first call after an idle spell starts a GPU instance: 23 s from zero to the first answer (measured). On math and code it decodes about 2.2x faster
 than plain decoding on the same L4; a copy-heavy code edit ran at 148 tok/s.

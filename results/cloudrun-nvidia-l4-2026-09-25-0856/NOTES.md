@@ -19,3 +19,11 @@ Service idle for 25 min (no instance). One request (`max_tokens` 8, thinking off
 `http=200 ttfb=23.32 s`. Cloud Run log: instance start 05:08:52.6Z, FUSE mount +1.3 s, staging 7.8 GB in 12.7 s,
 `llama-server` listening +7.0 s, `/health` probe passed 05:09:14.9Z (22.3 s), answer 0.7 s. Warm repeat: 0.66 s.
 Proxy check: `gcloud run services proxy` + OpenAI Python SDK (`/v1`) and Anthropic Python SDK (base URL, any key) both answered.
+
+## Idle storage cost and teardown (2026-09-25)
+
+Cloud Billing catalog, Standard regional storage: $0.020/GiB-month (asia-southeast1, europe-west4, europe-west1,
+us-central1 past 5 GiB free), $0.023 (us-east4). Bucket holds 8,349,175,840 B = 7.78 GiB -> $0.16-0.18/month.
+One-line script stores nothing else (image pulled from ghcr). deploy.sh path adds Artifact Registry 2.1 GB
+(~$0.16/month past 0.5 GB free) and a 54 KB `<project>_cloudbuild` bucket.
+`DOWN=1` tested on a throwaway service + bucket in bonsai2-gist-taxif: both deleted, exit 0, real resources untouched.

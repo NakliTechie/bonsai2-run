@@ -107,4 +107,4 @@ drafts accepted); the deploy path above ran end to end on Cloud Run in asia-sout
 ## License
 
 MIT. The image contains llama.cpp (MIT) with PrismML's changes; model weights are under their own licenses.
-[Spec](SPEC.md) · [Benchmarks](results/) · [Incidents](infra/aws/INCIDENTS.md) · [DFlash2 PR](https://github.com/PrismML-Eng/llama.cpp/pull/261)
+[Gist](https://gist.github.com/NakliTechie/a2de3567cee60abf9e0c5ade552478bd) · [Spec](SPEC.md) · [Benchmarks](results/) · [Incidents](infra/aws/INCIDENTS.md) · [DFlash2 PR](https://github.com/PrismML-Eng/llama.cpp/pull/261)
